@@ -61,7 +61,7 @@ fn main() {
                 let ray_direction = sample_position - cam.eye_loc;
 
                 let r = Ray::new(sample_position, ray_direction);
-                pixel_color += raytrace(&r, &scene, 20)
+                pixel_color += raytrace(&r, &scene, 40)
             }
             pixel_color = pixel_color/10.0;
             let color = vec3_to_rgb(&pixel_color);
@@ -172,5 +172,5 @@ fn random_vec3() -> Vec3 {
     if rand_vec3.norm() > 1.0 {
         return random_vec3();
     };
-    return rand_vec3;
+    return rand_vec3.normalize();
 }
