@@ -19,17 +19,17 @@ impl Sphere {
         let c = ray_to_centre.dotprod(&ray_to_centre) - self.radius * self.radius;
 
         let discrm = b * b - 4.0 * c;
-        let sq = discrm.sqrt().max(0.0);
+        if discrm < 0.0 {
+            return FARAWAY;
+        };
+        let sq = discrm.sqrt(); // there are two roots from here
 
-        let t0 = -0.5 * (b + sq);
-        let t1 = -0.5 * (b - sq);
-
-        let h = if t1 > t0 {t0} else {t1};
-
-        let hit = (discrm > 0.0) && (h > 0.0);
-
-        if hit { h } else {FARAWAY}
-
+        let t_smaller = -0.5 * (b + sq);
+        if t_smaller > 0.0 {
+            return t_smaller;
+        };
+        let h = t_smaller - b;
+        if h > 0.0 { h } else {FARAWAY}
     }
 
     pub fn normal_at(&self, surface_pos: Vec3) -> Vec3 {
