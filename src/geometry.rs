@@ -24,7 +24,7 @@ impl Sphere {
         let t0 = -0.5 * (b + sq);
         let t1 = -0.5 * (b - sq);
 
-        let h = if t1 > t0 {t1} else {t0};
+        let h = if t1 > t0 {t0} else {t1};
 
         let hit = (discrm > 0.0) && (h > 0.0);
 
