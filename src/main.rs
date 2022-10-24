@@ -1,6 +1,9 @@
 use std::fs::OpenOptions;
 use std::io::prelude::*;
-use rand::{thread_rng, Rng};
+use std::collections::HashMap;
+use std::cmp::min;
+use rand::{Rng, random};
+use std::process::abort;
 
 mod vector; //call a local module into this one with ; instead of {}
 use crate::vector::Vec3; // use the specific name here
@@ -18,15 +21,17 @@ fn main() {
     let image_height: u32 = 256;
 
     // Scene
-    let mut scene = Vec::new();
-    scene.push(Sphere::new(Vec3(0.0,0.0,1.0), 0.5));
-    scene.push(Sphere::new(Vec3(0.0,-100.5,1.0), 100.0));
+    let sphere1 = Sphere::new(Vec3(0.0, 0.0, 1.0), 0.5);
+    let sphere2 = Sphere::new(Vec3(0.0, 1.0, 1.0), 1.0);
+    let ground_sphere= Sphere::new(Vec3(0.0, -100.5, 1.0), 100.0);
+
+    let scene = vec![sphere1, ground_sphere];
 
     // Camera
     let viewport_height = 2.0;
     let viewport_width = 2.0;
 
-    let cam_origin = Vec3(0.0, 0.0, 0.0);
+    let cam_origin = Vec3(0.0, 0.5, 0.0);
     let horizontal = Vec3(viewport_width, 0.0, 0.0);
     let vertical = Vec3(0.0, viewport_height, 0.0);
 
@@ -50,15 +55,16 @@ fn main() {
     // Render
     for j in 0..max_j {
         for i in 0..max_i {
-            let mut ray_color = Vec3(0.0, 0.0, 0.0);
-            for iter in 0..9 {
+            let mut pixel_color = Vec3(0.0, 0.0, 0.0);
+            for iter in 1..10 {
                 let sample_position = cam.get_sample_loc(i,j);
                 let ray_direction = sample_position - cam.eye_loc;
 
                 let r = Ray::new(sample_position, ray_direction);
-                ray_color += raytrace(&r, &scene) / 10.0
+                pixel_color += raytrace(&r, &scene, 20)
             }
-            let color = vec3_to_rgb(&ray_color);
+            pixel_color = pixel_color/10.0;
+            let color = vec3_to_rgb(&pixel_color);
 
             writeln!(file, "{} {} {}", color.0, color.1, color.2)
                 .expect("Unable to write colors.");
@@ -67,19 +73,43 @@ fn main() {
     };
 }
 
-fn raytrace(ray: &Ray, scene: &Vec<Sphere>) -> Vec3 {
+fn raytrace(ray: &Ray, scene: &Vec<Sphere>, scatter_depth: u8) -> Vec3 {
+    let mut ray_color = Vec3(0.0, 0.0, 0.0);
+    if scatter_depth == 0 {
+        return ray_color;
+    }
+    let mut param = FARAWAY;
+    let mut hit_rec = None;
     for hittable in scene {
-        let param = hittable.intersect(ray);
-        if param != FARAWAY {
-            let surface_normal = hittable.normal_at(ray.position_at(param));
-            return 0.5 * surface_normal + Vec3(0.5, 0.5, 0.5);
+        let test_param = hittable.intersect(ray);
+
+        if test_param < param {
+            param = test_param;
+            hit_rec = Some(hittable);
         }
     }
+    if param != FARAWAY && param > 1.0e-8 {
+        let hit_obj = hit_rec.unwrap();
+        // let surface_normal = hittable.normal_at(ray.position_at(param));
+        // return 0.5 * surface_normal + Vec3(0.5, 0.5, 0.5);
+        let scatter_loc: Vec3 = ray.position_at(param);
+        let scatter_dir = hit_obj.normal_at(scatter_loc)
+                                + random_vec3();
+        let scatter_ray: Ray = Ray::new(scatter_loc, scatter_dir);
+        let scatter_color = raytrace(&scatter_ray, scene, scatter_depth - 1);
 
-    // Current calculation for sky color when no intersection is made
-    let t = 0.5 * (ray.dir.1 + 1.0);
+        ray_color = 0.5 * scatter_color;
+        return ray_color;
+    }
+    else {
 
-    (1.0 - t) * Vec3(1.0, 1.0, 1.0) + t * Vec3(0.5, 0.7, 1.0)
+        // Current calculation for sky color when no intersection is made
+        let t = 0.5 * (ray.dir.1 + 1.0);
+
+        ray_color += (1.0 - t) * Vec3(1.0, 1.0, 1.0) + t * Vec3(0.5, 0.7, 1.0);
+
+        return ray_color;
+    }
     
 }
 
@@ -130,6 +160,17 @@ impl Camera {
 }
 
 fn vec3_to_rgb(vec: &Vec3) -> (u8, u8, u8) {
-    let unit_vec = vec.normalize();
-    ((255.0*unit_vec.0) as u8, (255.0*unit_vec.1) as u8, (255.0*unit_vec.2) as u8)
+    ((255.0*vec.0) as u8, (255.0*vec.1) as u8, (255.0*vec.2) as u8)
+}
+
+fn random_vec3() -> Vec3 {
+    let mut rng = rand::thread_rng();
+    let v0: f64 = rng.gen();
+    let v1: f64 = rng.gen();
+    let v2: f64 = rng.gen();
+    let rand_vec3 = 2.0 * Vec3(v0 - 0.5, v1 - 0.5, v2 - 0.5);
+    if rand_vec3.norm() > 1.0 {
+        return random_vec3();
+    };
+    return rand_vec3;
 }
