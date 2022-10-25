@@ -1,5 +1,6 @@
 use std::fs::OpenOptions;
 use std::io::prelude::*;
+use materials::lambertian;
 use rand::{Rng, thread_rng};
 
 mod vector; //call a local module into this one with ; instead of {}
@@ -14,6 +15,9 @@ use crate::ray::Ray;
 mod geometry;
 use crate::geometry::{Sphere, FARAWAY};
 
+mod materials;
+use crate::materials::Material;
+
 fn main() {
 
     // Image
@@ -21,10 +25,18 @@ fn main() {
     let image_height: u32 = 512;
 
     // Scene
-    let sphere1 = Sphere::new(Vec3(0.0, 0.0, 2.0), 0.5);
-    let sphere2 = Sphere::new(Vec3(0.7, -0.25, 0.7), 0.25);
-    let sphere3 = Sphere::new(Vec3(-0.7, 0.0, 0.7), 0.5);
-    let ground_sphere= Sphere::new(Vec3(0.0, -100.5, 1.0), 100.0);
+    let redish: Color = Color::new(0.9, 0.3, 0.3);
+    let greenish: Color = Color::new(0.3, 0.9, 0.3);
+    let bluish: Color = Color::new(0.3, 0.3, 0.9);
+    let material1 = Material::new(redish);
+    let material2 = Material::new(greenish);
+    let material3 = Material::new(bluish);
+    let material4 = Material::new(Color::new(0.3, 0.3, 0.3));
+
+    let sphere1 = Sphere::new(Vec3(0.0, 0.0, 2.0), 0.5, material1);
+    let sphere2 = Sphere::new(Vec3(0.7, -0.25, 0.7), 0.25, material2);
+    let sphere3 = Sphere::new(Vec3(-0.7, 0.0, 0.7), 0.5, material3);
+    let ground_sphere= Sphere::new(Vec3(0.0, -100.5, 1.0), 100.0, material4);
 
     let scene = vec![sphere1, ground_sphere, sphere2, sphere3];
 
@@ -96,13 +108,10 @@ fn raytrace(ray: &Ray, scene: &Vec<Sphere>, scatter_depth: u8) -> Color {
         // let surface_normal = hittable.normal_at(ray.position_at(param));
         // return 0.5 * surface_normal + Vec3(0.5, 0.5, 0.5);
         let scatter_loc: Vec3 = ray.position_at(param);
-        // Attenuation
-        let scatter_dir = hit_obj.normal_at(scatter_loc)
-                                + random_vec3();
-        // Scattered Ray is generated
-        let scatter_ray: Ray = Ray::new(scatter_loc, scatter_dir);
-        let albedo = Color::new(0.8, 0.8, 0.1);
-        let scatter_color: Color = albedo * raytrace(&scatter_ray, scene, scatter_depth - 1);
+        // Scattered Ray is generated, currently diffuse material hardcoded
+        let scatter_ray: Ray = lambertian(&ray, hit_obj, scatter_loc);
+
+        let scatter_color: Color = hit_obj.material.albedo * raytrace(&scatter_ray, scene, scatter_depth - 1);
 
         return scatter_color;
     }
@@ -165,13 +174,4 @@ impl Camera {
 
 fn color_to_ppm(col: Color) -> (u8, u8, u8) {
     ((255.0 * col.r) as u8, (255.0*col.g) as u8, (255.0 * col.b) as u8)
-}
-
-fn random_vec3() -> Vec3 {
-    let v: (f64, f64, f64) = thread_rng().gen();
-    let rand_vec3 = 2.0 * Vec3(v.0 - 0.5, v.1 - 0.5, v.2 - 0.5);
-    if rand_vec3.norm() > 1.0 {
-        return random_vec3();
-    };
-    return rand_vec3.normalize();
 }

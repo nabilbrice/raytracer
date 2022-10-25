@@ -1,16 +1,18 @@
 use crate::vector::Vec3;
 use crate::ray::Ray;
+use crate::materials::Material;
 
 pub const FARAWAY: f64 = 1.0e39;
 
 pub struct Sphere {
     pub orig: Vec3,
     pub radius: f64,
+    pub material: Material,
 }
 
 impl Sphere {
-    pub fn new(centre: Vec3, radius: f64) -> Sphere {
-        Sphere {orig: centre, radius}
+    pub fn new(centre: Vec3, radius: f64, material: Material) -> Sphere {
+        Sphere {orig: centre, radius, material}
     }
 
     pub fn intersect(&self, ray: &Ray) -> f64 {
@@ -31,8 +33,14 @@ impl Sphere {
         let h = t_smaller - b;
         if h > 0.0 { h } else {FARAWAY}
     }
+}
 
-    pub fn normal_at(&self, surface_pos: Vec3) -> Vec3 {
+impl SurfaceNormal for Sphere {
+    fn normal_at(&self, surface_pos: Vec3) -> Vec3 {
         (surface_pos - self.orig).normalize()
     }
+}
+
+pub trait SurfaceNormal {
+    fn normal_at(&self, surface_pos: Vec3) -> Vec3;
 }

@@ -1,5 +1,6 @@
 use std::ops;
 
+#[derive(Clone, Copy)]
 pub struct Color {
     pub r: f64,
     pub g: f64,
