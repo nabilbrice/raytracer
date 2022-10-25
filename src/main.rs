@@ -1,9 +1,6 @@
 use std::fs::OpenOptions;
 use std::io::prelude::*;
-use std::collections::HashMap;
-use std::cmp::min;
-use rand::{Rng, random};
-use std::process::abort;
+use rand::{Rng, thread_rng};
 
 mod vector; //call a local module into this one with ; instead of {}
 use crate::vector::Vec3; // use the specific name here
@@ -17,15 +14,15 @@ use crate::geometry::{Sphere, FARAWAY};
 fn main() {
 
     // Image
-    let image_width: u32 = 256;
-    let image_height: u32 = 256;
+    let image_width: u32 = 512;
+    let image_height: u32 = 512;
 
     // Scene
     let sphere1 = Sphere::new(Vec3(0.0, 0.0, 1.0), 0.5);
-    let sphere2 = Sphere::new(Vec3(0.0, 1.0, 1.0), 1.0);
+    let sphere2 = Sphere::new(Vec3(0.3, 0.8, 1.0), 0.5);
     let ground_sphere= Sphere::new(Vec3(0.0, -100.5, 1.0), 100.0);
 
-    let scene = vec![sphere1, ground_sphere];
+    let scene = vec![sphere1, ground_sphere, sphere2];
 
     // Camera
     let viewport_height = 2.0;
@@ -69,7 +66,9 @@ fn main() {
             writeln!(file, "{} {} {}", color.0, color.1, color.2)
                 .expect("Unable to write colors.");
 
+
         };
+    print!("{} % \r", (100.0 * f64::from(j) / f64::from(max_j)) as u32);
     };
 }
 
@@ -88,8 +87,8 @@ fn raytrace(ray: &Ray, scene: &Vec<Sphere>, scatter_depth: u8) -> Vec3 {
             hit_rec = Some(hittable);
         }
     }
-    if param != FARAWAY && param > 1.0e-8 {
-        let hit_obj = hit_rec.unwrap();
+    if param != FARAWAY && param > 1.0e-6 {
+        let hit_obj = hit_rec.expect("hit object is None!");
         // let surface_normal = hittable.normal_at(ray.position_at(param));
         // return 0.5 * surface_normal + Vec3(0.5, 0.5, 0.5);
         let scatter_loc: Vec3 = ray.position_at(param);
@@ -138,14 +137,12 @@ impl Camera {
     }
 
     fn get_sample_loc(&self, i: u32, j:u32) -> Vec3 {
-        let mut rng = rand::thread_rng();
-        let h_rng: f64 = rng.gen();
-        let v_rng: f64 = rng.gen();
+        let rng_scalars: [f64; 2] = thread_rng().gen();
 
         let horiz_increm = 1.0/f64::from(self.horiz_res);
         let vert_increm = 1.0/f64::from(self.vert_res);
-        let horiz_nudge: Vec3 = (h_rng * horiz_increm) * self.horiz_arm;
-        let vert_nudge: Vec3 = (v_rng * vert_increm) * self.vert_arm;
+        let horiz_nudge: Vec3 = (rng_scalars[0] * horiz_increm) * self.horiz_arm;
+        let vert_nudge: Vec3 = (rng_scalars[1] * vert_increm) * self.vert_arm;
 
         let horiz_span = self.horiz_arm;
         let vert_span = self.vert_arm;
@@ -164,11 +161,8 @@ fn vec3_to_rgb(vec: &Vec3) -> (u8, u8, u8) {
 }
 
 fn random_vec3() -> Vec3 {
-    let mut rng = rand::thread_rng();
-    let v0: f64 = rng.gen();
-    let v1: f64 = rng.gen();
-    let v2: f64 = rng.gen();
-    let rand_vec3 = 2.0 * Vec3(v0 - 0.5, v1 - 0.5, v2 - 0.5);
+    let v: (f64, f64, f64) = thread_rng().gen();
+    let rand_vec3 = 2.0 * Vec3(v.0 - 0.5, v.1 - 0.5, v.2 - 0.5);
     if rand_vec3.norm() > 1.0 {
         return random_vec3();
     };
