@@ -5,6 +5,9 @@ use rand::{Rng, thread_rng};
 mod vector; //call a local module into this one with ; instead of {}
 use crate::vector::Vec3; // use the specific name here
 
+mod color;
+use crate::color::Color;
+
 mod ray;
 use crate::ray::Ray;
 
@@ -18,11 +21,12 @@ fn main() {
     let image_height: u32 = 512;
 
     // Scene
-    let sphere1 = Sphere::new(Vec3(0.0, 0.0, 1.0), 0.5);
-    let sphere2 = Sphere::new(Vec3(0.3, 0.8, 1.0), 0.5);
+    let sphere1 = Sphere::new(Vec3(0.0, 0.0, 2.0), 0.5);
+    let sphere2 = Sphere::new(Vec3(0.7, -0.25, 0.7), 0.25);
+    let sphere3 = Sphere::new(Vec3(-0.7, 0.0, 0.7), 0.5);
     let ground_sphere= Sphere::new(Vec3(0.0, -100.5, 1.0), 100.0);
 
-    let scene = vec![sphere1, ground_sphere, sphere2];
+    let scene = vec![sphere1, ground_sphere, sphere2, sphere3];
 
     // Camera
     let viewport_height = 2.0;
@@ -34,7 +38,7 @@ fn main() {
 
     // Camera_TEST
     let cam = Camera::new(cam_origin, horizontal, vertical,
-    1.0, image_width, image_height);
+    10.0, image_width, image_height);
 
     // Write header to file
     let header = format!("P3\n{} {}\n255\n",&image_width,&image_height);
@@ -52,7 +56,7 @@ fn main() {
     // Render
     for j in 0..max_j {
         for i in 0..max_i {
-            let mut pixel_color = Vec3(0.0, 0.0, 0.0);
+            let mut pixel_color = Color::new(0.0, 0.0, 0.0);
             for iter in 1..10 {
                 let sample_position = cam.get_sample_loc(i,j);
                 let ray_direction = sample_position - cam.eye_loc;
@@ -60,8 +64,8 @@ fn main() {
                 let r = Ray::new(sample_position, ray_direction);
                 pixel_color += raytrace(&r, &scene, 40)
             }
-            pixel_color = pixel_color/10.0;
-            let color = vec3_to_rgb(&pixel_color);
+            pixel_color = (1.0/10.0) * pixel_color; // no Div defined for Color
+            let color = color_to_ppm(pixel_color);
 
             writeln!(file, "{} {} {}", color.0, color.1, color.2)
                 .expect("Unable to write colors.");
@@ -72,8 +76,8 @@ fn main() {
     };
 }
 
-fn raytrace(ray: &Ray, scene: &Vec<Sphere>, scatter_depth: u8) -> Vec3 {
-    let mut ray_color = Vec3(0.0, 0.0, 0.0);
+fn raytrace(ray: &Ray, scene: &Vec<Sphere>, scatter_depth: u8) -> Color {
+    let mut ray_color: Color = Color::new(0.0, 0.0, 0.0);
     if scatter_depth == 0 {
         return ray_color;
     }
@@ -92,20 +96,23 @@ fn raytrace(ray: &Ray, scene: &Vec<Sphere>, scatter_depth: u8) -> Vec3 {
         // let surface_normal = hittable.normal_at(ray.position_at(param));
         // return 0.5 * surface_normal + Vec3(0.5, 0.5, 0.5);
         let scatter_loc: Vec3 = ray.position_at(param);
+        // Attenuation
         let scatter_dir = hit_obj.normal_at(scatter_loc)
                                 + random_vec3();
+        // Scattered Ray is generated
         let scatter_ray: Ray = Ray::new(scatter_loc, scatter_dir);
-        let scatter_color = raytrace(&scatter_ray, scene, scatter_depth - 1);
+        let albedo = Color::new(0.8, 0.8, 0.1);
+        let scatter_color: Color = albedo * raytrace(&scatter_ray, scene, scatter_depth - 1);
 
-        ray_color = 0.5 * scatter_color;
-        return ray_color;
+        return scatter_color;
     }
     else {
 
         // Current calculation for sky color when no intersection is made
         let t = 0.5 * (ray.dir.1 + 1.0);
 
-        ray_color += (1.0 - t) * Vec3(1.0, 1.0, 1.0) + t * Vec3(0.5, 0.7, 1.0);
+        ray_color += (1.0 - t) * Color{r: 1.0, g: 1.0, b: 1.0}
+                    + t* Color{r: 0.5, g: 0.7, b: 1.0};
 
         return ray_color;
     }
@@ -156,8 +163,8 @@ impl Camera {
 
 }
 
-fn vec3_to_rgb(vec: &Vec3) -> (u8, u8, u8) {
-    ((255.0*vec.0) as u8, (255.0*vec.1) as u8, (255.0*vec.2) as u8)
+fn color_to_ppm(col: Color) -> (u8, u8, u8) {
+    ((255.0 * col.r) as u8, (255.0*col.g) as u8, (255.0 * col.b) as u8)
 }
 
 fn random_vec3() -> Vec3 {
