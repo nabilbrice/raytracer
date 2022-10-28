@@ -1,21 +1,34 @@
-use crate::vector::Vec3;
+use crate::{vector::Vec3, geometry::SurfaceNormal};
 use crate::color::Color;
 use crate::ray::Ray;
 use crate::geometry;
 use rand::{Rng, thread_rng};
-pub struct Material {
-    pub albedo: Color,
+
+pub enum Material {
+    Diffuse {albedo: Color},
+    Metal {albedo: Color},
 }
 
 // Implement using enums?
-pub enum Composition {
-    Diffuse,
-    Metal,
-}
-
 impl Material {
-    pub fn new(albedo: Color) -> Material {
-        Material{albedo}
+    pub fn albedo(&self) -> Color {
+        match self {
+            &Material::Diffuse{albedo: color} => return color,
+            &Material::Metal{albedo: color} => return color,
+        }
+    }
+    pub fn scatter<T: SurfaceNormal>(&self, inc_ray: &Ray, shape: &T, scatter_loc: Vec3) -> Ray {
+        match self {
+            &Material::Diffuse{albedo: _} => {
+                let scatter_dir = shape.normal_at(scatter_loc) + random_vec3();
+                return Ray::new(scatter_loc, scatter_dir)
+            },
+            &Material::Metal{albedo: _} => {
+                let scatter_normal = shape.normal_at(scatter_loc);
+                let scatter_dir: Vec3 = inc_ray.dir - 2.0 * scatter_normal.dotprod(&inc_ray.dir) * scatter_normal;
+                return Ray::new(scatter_loc, scatter_dir)
+            }
+        }
     }
 }
 

@@ -1,6 +1,5 @@
 use std::fs::OpenOptions;
 use std::io::prelude::*;
-use materials::lambertian;
 use rand::{Rng, thread_rng};
 
 mod vector; //call a local module into this one with ; instead of {}
@@ -16,7 +15,7 @@ mod geometry;
 use crate::geometry::{Sphere, FARAWAY};
 
 mod materials;
-use crate::materials::Material;
+use crate::materials::Material::{Diffuse, Metal};
 
 fn main() {
 
@@ -28,13 +27,15 @@ fn main() {
     let redish: Color = Color::new(0.9, 0.3, 0.3);
     let greenish: Color = Color::new(0.3, 0.9, 0.3);
     let bluish: Color = Color::new(0.3, 0.3, 0.9);
-    let material1 = Material::new(redish);
-    let material2 = Material::new(greenish);
-    let material3 = Material::new(bluish);
-    let material4 = Material::new(Color::new(0.3, 0.3, 0.3));
+    let material1 = Diffuse{albedo: redish};
+    let material2 = Diffuse{albedo: greenish};
+    let material3 = Diffuse{albedo: bluish};
+    let material4 = Diffuse{albedo: Color::new(0.3, 0.3, 0.3)};
+    let metal1 = Metal{albedo: Color::new(0.8, 0.8, 0.8)};
+    let metal2 = Metal{albedo: Color::new(0.8, 0.6, 0.2)};
 
-    let sphere1 = Sphere::new(Vec3(0.0, 0.0, 2.0), 0.5, material1);
-    let sphere2 = Sphere::new(Vec3(0.7, -0.25, 0.7), 0.25, material2);
+    let sphere1 = Sphere::new(Vec3(0.0, 0.0, 2.0), 0.5, metal1);
+    let sphere2 = Sphere::new(Vec3(0.7, -0.25, 0.7), 0.25, metal2);
     let sphere3 = Sphere::new(Vec3(-0.7, 0.0, 0.7), 0.5, material3);
     let ground_sphere= Sphere::new(Vec3(0.0, -100.5, 1.0), 100.0, material4);
 
@@ -69,14 +70,14 @@ fn main() {
     for j in 0..max_j {
         for i in 0..max_i {
             let mut pixel_color = Color::new(0.0, 0.0, 0.0);
-            for iter in 1..10 {
+            for _iter in 1..30 {
                 let sample_position = cam.get_sample_loc(i,j);
                 let ray_direction = sample_position - cam.eye_loc;
 
                 let r = Ray::new(sample_position, ray_direction);
                 pixel_color += raytrace(&r, &scene, 40)
             }
-            pixel_color = (1.0/10.0) * pixel_color; // no Div defined for Color
+            pixel_color = (1.0/30.0) * pixel_color; // no Div defined for Color
             let color = color_to_ppm(pixel_color);
 
             writeln!(file, "{} {} {}", color.0, color.1, color.2)
@@ -109,9 +110,9 @@ fn raytrace(ray: &Ray, scene: &Vec<Sphere>, scatter_depth: u8) -> Color {
         // return 0.5 * surface_normal + Vec3(0.5, 0.5, 0.5);
         let scatter_loc: Vec3 = ray.position_at(param);
         // Scattered Ray is generated, currently diffuse material hardcoded
-        let scatter_ray: Ray = lambertian(&ray, hit_obj, scatter_loc);
+        let scatter_ray: Ray = hit_obj.material.scatter(&ray, hit_obj, scatter_loc);
 
-        let scatter_color: Color = hit_obj.material.albedo * raytrace(&scatter_ray, scene, scatter_depth - 1);
+        let scatter_color: Color = hit_obj.material.albedo() * raytrace(&scatter_ray, scene, scatter_depth - 1);
 
         return scatter_color;
     }
