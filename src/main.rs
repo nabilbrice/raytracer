@@ -27,12 +27,13 @@ fn main() {
     let redish: Color = Color::new(0.9, 0.3, 0.3);
     let greenish: Color = Color::new(0.3, 0.9, 0.3);
     let bluish: Color = Color::new(0.3, 0.3, 0.9);
+    let yellowish = Color::new(0.8, 0.6, 0.2);
     let material1 = Diffuse{albedo: redish};
     let material2 = Diffuse{albedo: greenish};
     let material3 = Diffuse{albedo: bluish};
     let material4 = Diffuse{albedo: Color::new(0.3, 0.3, 0.3)};
-    let metal1 = Metal{albedo: Color::new(0.8, 0.8, 0.8)};
-    let metal2 = Metal{albedo: Color::new(0.8, 0.6, 0.2)};
+    let metal1 = Metal{albedo: Color::new(0.8, 0.8, 0.8), fuzz: 0.0};
+    let metal2 = Metal{albedo: yellowish, fuzz: 0.3};
 
     let sphere1 = Sphere::new(Vec3(0.0, 0.0, 2.0), 0.5, metal1);
     let sphere2 = Sphere::new(Vec3(0.7, -0.25, 0.7), 0.25, metal2);
