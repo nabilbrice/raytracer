@@ -15,7 +15,7 @@ mod geometry;
 use crate::geometry::{Sphere, FARAWAY};
 
 mod materials;
-use crate::materials::Material::{Diffuse, Metal};
+use crate::materials::Material::{Diffuse, Metal, Dielectric};
 
 fn main() {
 
@@ -32,11 +32,13 @@ fn main() {
     let material2 = Diffuse{albedo: greenish};
     let material3 = Diffuse{albedo: bluish};
     let material4 = Diffuse{albedo: Color::new(0.3, 0.3, 0.3)};
-    let metal1 = Metal{albedo: Color::new(0.8, 0.8, 0.8), fuzz: 0.0};
+    let metal1 = Metal{albedo: Color::new(0.8, 0.8, 0.8), fuzz: 0.1};
     let metal2 = Metal{albedo: yellowish, fuzz: 0.3};
+    
+    let glass1 = Dielectric{refractive_index: 1.5};
 
     let sphere1 = Sphere::new(Vec3(0.0, 0.0, 2.0), 0.5, metal1);
-    let sphere2 = Sphere::new(Vec3(0.7, -0.25, 0.7), 0.25, metal2);
+    let sphere2 = Sphere::new(Vec3(0.7, -0.25, 0.7), 0.25, glass1);
     let sphere3 = Sphere::new(Vec3(-0.7, 0.0, 0.7), 0.5, material3);
     let ground_sphere= Sphere::new(Vec3(0.0, -100.5, 1.0), 100.0, material4);
 
@@ -76,7 +78,7 @@ fn main() {
                 let ray_direction = sample_position - cam.eye_loc;
 
                 let r = Ray::new(sample_position, ray_direction);
-                pixel_color += raytrace(&r, &scene, 40)
+                pixel_color += raytrace(&r, &scene, 50)
             }
             pixel_color = (1.0/30.0) * pixel_color; // no Div defined for Color
             let color = color_to_ppm(pixel_color);
@@ -86,7 +88,7 @@ fn main() {
 
 
         };
-    print!("{} % \r", (100.0 * f64::from(j) / f64::from(max_j)) as u32);
+        print!("{} % \r", (100.0 * f64::from(j) / f64::from(max_j)) as u32);
     };
 }
 
