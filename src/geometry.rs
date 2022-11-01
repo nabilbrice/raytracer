@@ -1,6 +1,7 @@
 use crate::vector::Vec3;
 use crate::ray::Ray;
 use crate::materials::Material;
+use crate::color::Color;
 
 pub const FARAWAY: f64 = 1.0e39;
 
@@ -11,8 +12,8 @@ pub struct Sphere {
 }
 
 impl Sphere {
-    pub fn new(centre: Vec3, radius: f64, material: Material) -> Sphere {
-        Sphere {orig: centre, radius, material}
+    pub fn new(centre: Vec3, radius: f64, material: Material) -> Self {
+        Self {orig: centre, radius, material}
     }
 
     pub fn intersect(&self, ray: &Ray) -> f64 {
@@ -30,17 +31,25 @@ impl Sphere {
         if t_smaller > 0.0 {
             return t_smaller;
         };
-        let h = t_smaller - b;
-        if h > 0.0 { h } else {FARAWAY}
+        let h = t_smaller + sq;
+        if h > 1.0e-6 { h } else {FARAWAY} // 1.0e-6 to avoid self-intersection
     }
 }
 
 impl SurfaceNormal for Sphere {
     fn normal_at(&self, surface_pos: Vec3) -> Vec3 {
-        (surface_pos - self.orig).normalize()
+        (surface_pos - self.orig) / self.radius // cheaper hack than .normalize()
     }
 }
 
 pub trait SurfaceNormal {
     fn normal_at(&self, surface_pos: Vec3) -> Vec3;
+}
+
+
+#[test]
+fn normal_test() {
+    let mat = Material::Diffuse { albedo: Color{r: 1.0,g: 1.0,b: 1.0} };
+    let sph = Sphere::new(Vec3(0.0,0.0,0.0), 2.0, mat);
+    assert_eq!(sph.normal_at(Vec3(2.0,0.0,0.0)), Vec3(1.0,0.0,0.0));
 }
