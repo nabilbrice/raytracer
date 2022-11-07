@@ -1,6 +1,5 @@
 use std::fs::OpenOptions;
 use std::io::prelude::*;
-use rand::{Rng, thread_rng};
 
 mod vector; //call a local module into this one with ; instead of {}
 use crate::vector::Vec3; // use the specific name here
@@ -16,6 +15,9 @@ use crate::geometry::{Sphere, FARAWAY};
 
 mod materials;
 use crate::materials::Material::{Diffuse, Metal, Dielectric};
+
+mod camera;
+use crate::camera::Camera;
 
 fn main() {
 
@@ -35,26 +37,25 @@ fn main() {
     let metal1 = Metal{albedo: Color::new(0.8, 0.8, 0.8), fuzz: 0.1};
     let metal2 = Metal{albedo: yellowish, fuzz: 0.3};
     
-    let glass1 = Dielectric{refractive_index: 1.5};
+    let glass1 = Dielectric{refractive_index: 2.5};
+    let glass2 = Dielectric{refractive_index: 2.5};
 
-    let sphere1 = Sphere::new(Vec3(0.0, 0.0, 2.0), 0.5, metal1);
-    let sphere2 = Sphere::new(Vec3(0.7, -0.25, 0.7), 0.25, glass1);
-    let sphere3 = Sphere::new(Vec3(-0.7, 0.0, 0.7), 0.5, material3);
-    let ground_sphere= Sphere::new(Vec3(0.0, -100.5, 1.0), 100.0, material4);
+    let sphere1 = Sphere::new(Vec3(0.0, 0.0, 4.0), 0.5, glass1);
+    let sphere2 = Sphere::new(Vec3(0.7, -0.25, 0.7), 0.25, metal1);
+    let sphere3 = Sphere::new(Vec3(-0.5, 0.0, 0.7), 0.5, metal2);
+    let ground_sphere= Sphere::new(Vec3(0.0, -100.5, 1.0), 100.0, material2);
+
+    let inverted_sphere = Sphere::new(Vec3(0.0, 0.0, 2.0), -0.45, glass2);
 
     let scene = vec![sphere1, ground_sphere, sphere2, sphere3];
 
     // Camera
-    let viewport_height = 2.0;
-    let viewport_width = 2.0;
-
-    let cam_origin = Vec3(0.0, 0.5, 0.0);
-    let horizontal = Vec3(viewport_width, 0.0, 0.0);
-    let vertical = Vec3(0.0, viewport_height, 0.0);
+    let cam_lookfrom = Vec3(0.0, 1.5, -5.0);
+    let aperture_radius = 0.3;
 
     // Camera_TEST
-    let cam = Camera::new(cam_origin, horizontal, vertical,
-    10.0, image_width, image_height);
+    let cam = Camera::new(Vec3(0.0, 0.0, 1.0), cam_lookfrom,
+                1.0, aperture_radius, image_width, image_height);
 
     // Write header to file
     let header = format!("P3\n{} {}\n255\n",&image_width,&image_height);
@@ -69,18 +70,20 @@ fn main() {
 
     let max_j = image_height;
     let max_i = image_width;
+    let spp: i32 = 50; // samples per pixel
     // Render
     for j in 0..max_j {
         for i in 0..max_i {
             let mut pixel_color = Color::new(0.0, 0.0, 0.0);
-            for _iter in 1..30 {
+            for _iter in 1..spp {
                 let sample_position = cam.get_sample_loc(i,j);
-                let ray_direction = sample_position - cam.eye_loc;
+                let lens_sample_loc = cam.get_focus_loc();
+                let ray_direction = sample_position - lens_sample_loc;
 
-                let r = Ray::new(sample_position, ray_direction);
-                pixel_color += raytrace(&r, &scene, 50)
+                let r = Ray::new(lens_sample_loc, ray_direction);
+                pixel_color += raytrace(&r, &scene, 10)
             }
-            pixel_color = (1.0/30.0) * pixel_color; // no Div defined for Color
+            pixel_color = (1.0/(spp as f64)) * pixel_color; // no Div defined for Color
             let color = color_to_ppm(pixel_color);
 
             writeln!(file, "{} {} {}", color.0, color.1, color.2)
@@ -132,49 +135,6 @@ fn raytrace(ray: &Ray, scene: &Vec<Sphere>, scatter_depth: u8) -> Color {
     
 }
 
-struct Camera {
-    position: Vec3,
-    horiz_arm: Vec3,
-    vert_arm: Vec3,
-    direction: Vec3,
-    eye_loc: Vec3,
-    horiz_res: u32,
-    vert_res: u32,
-    aspect_ratio: f64,
-}
-
-impl Camera {
-    fn new(position: Vec3, horiz_arm: Vec3, vert_arm: Vec3,
-        focal_length: f64, horiz_res: u32, vert_res: u32) -> Camera {
-            let direction = horiz_arm.cross(&vert_arm).normalize();
-            let eye_loc: Vec3 = position - (focal_length * direction);
-            let aspect_ratio: f64 = horiz_arm.norm()/vert_arm.norm();
-            Camera {
-                position, horiz_arm, vert_arm,
-                direction, eye_loc, horiz_res, vert_res, aspect_ratio
-            }
-
-    }
-
-    fn get_sample_loc(&self, i: u32, j:u32) -> Vec3 {
-        let rng_scalars: [f64; 2] = thread_rng().gen();
-
-        let horiz_increm = 1.0/f64::from(self.horiz_res);
-        let vert_increm = 1.0/f64::from(self.vert_res);
-        let horiz_nudge: Vec3 = (rng_scalars[0] * horiz_increm) * self.horiz_arm;
-        let vert_nudge: Vec3 = (rng_scalars[1] * vert_increm) * self.vert_arm;
-
-        let horiz_span = self.horiz_arm;
-        let vert_span = self.vert_arm;
-
-        let grid_h_offset = -0.5 + f64::from(i)*horiz_increm;
-        let grid_v_offset = 0.5 - f64::from(j)*vert_increm;
-
-        self.position + (grid_h_offset * horiz_span) + (grid_v_offset * vert_span) 
-        + horiz_nudge + vert_nudge
-    }
-
-}
 
 fn color_to_ppm(col: Color) -> (u8, u8, u8) {
     ((255.0 * col.r) as u8, (255.0*col.g) as u8, (255.0 * col.b) as u8)
