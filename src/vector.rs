@@ -107,17 +107,8 @@ pub fn lerp_vec3(p: Vec3, q: Vec3, t: f64) -> Vec3 {
     ((1.0 - t) * p) + (t * q)
 }
 
-/* 
-fn main() {
-    let v1 = Vec3(1.0,2.0,3.0);
-    let v2 = Vec3(-1.0,-2.0,-1.0);
-    println!("{}", {v1.clone() + v2.clone()});
-
-    println!("{}", -v1.clone());
-    println!("{}", {v1.clone() - v2.clone()});
-
-    println!("{}", 2.0 * v1.clone() * 2.0);
-    println!("{}", v1.clone() / 2.0);
-    println!("{}", v1.clone().norm())
+#[test]
+fn norm_test() {
+    let u = Vec3(3.0,4.0,0.0);
+    assert_eq!(u.norm(), 5.0)
 }
-*/
