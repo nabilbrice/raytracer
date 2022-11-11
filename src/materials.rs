@@ -1,4 +1,4 @@
-use crate::{vector::Vec3, geometry::SurfaceNormal};
+use crate::{vector::Vec3, geometry::};
 use crate::geometry::Sphere;
 use crate::color::Color;
 use crate::ray::Ray;
@@ -19,7 +19,7 @@ impl Material {
             &Material::Dielectric { refractive_index: _ } => return Color::new(1.0, 1.0, 1.0),
         }
     }
-    pub fn scatter<T: SurfaceNormal>(&self, inc_ray: &Ray, shape: &T, scatter_loc: Vec3) -> Ray {
+    pub fn scatter<T: Surface>(&self, inc_ray: &Ray, shape: &T, scatter_loc: Vec3) -> Ray {
         match self {
             &Material::Diffuse{albedo: _} => {
                 let scatter_dir = shape.normal_at(scatter_loc) + random_vec3();

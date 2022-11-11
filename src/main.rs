@@ -110,14 +110,10 @@ fn raytrace(ray: &Ray, scene: &Vec<Sphere>, scatter_depth: u8) -> Color {
             hit_rec = Some(hittable);
         }
     }
-    if param != FARAWAY && param > 1.0e-6 {
+    if param != FARAWAY {
         let hit_obj = hit_rec.expect("hit object is None!");
-        // let surface_normal = hittable.normal_at(ray.position_at(param));
-        // return 0.5 * surface_normal + Vec3(0.5, 0.5, 0.5);
         let scatter_loc: Vec3 = ray.position_at(param);
-        // Scattered Ray is generated, currently diffuse material hardcoded
         let scatter_ray: Ray = hit_obj.material.scatter(&ray, hit_obj, scatter_loc);
-
         let scatter_color: Color = hit_obj.material.albedo() * raytrace(&scatter_ray, scene, scatter_depth - 1);
 
         return scatter_color;

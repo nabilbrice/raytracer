@@ -36,13 +36,13 @@ impl Sphere {
     }
 }
 
-impl SurfaceNormal for Sphere {
+impl Surface for Sphere {
     fn normal_at(&self, surface_pos: Vec3) -> Vec3 {
         (surface_pos - self.orig) / self.radius // cheaper hack than .normalize()
     }
 }
 
-pub trait SurfaceNormal {
+pub trait Surface {
     fn normal_at(&self, surface_pos: Vec3) -> Vec3;
 }
 
