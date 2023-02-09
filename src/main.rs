@@ -101,18 +101,16 @@ fn raytrace(ray: &Ray, scene: &Vec<Sphere>, scatter_depth: u8) -> Color {
     if scatter_depth == 0 {
         return Color::new(0.0,0.0,0.0);
     }
-    let mut param = FARAWAY;
-    let mut hit_rec: Option<&Sphere> = None;
-    for hittable in scene {
-        let test_param = hittable.intersect(ray);
 
-        if test_param < param {
-            param = test_param;
-            hit_rec = Some(hittable);
-        }
-    }
+    let hit_rec = scene.iter()
+                        .map(|hittable| {(hittable, hittable.intersect(ray))})
+                        .min_by(|x,y| {x.1.total_cmp(&y.1)})
+                        .expect("minimum hit object is None!");
+    
+    let hit_obj = hit_rec.0;
+    let param = hit_rec.1;
+
     if param != FARAWAY {
-        let hit_obj = hit_rec.expect("hit object is None!");
         let scatter_loc: Vec3 = ray.position_at(param);
         let scatter_ray: Ray = hit_obj.material.scatter(ray, hit_obj, scatter_loc);
         return hit_obj.material.albedo() * raytrace(&scatter_ray, scene, scatter_depth - 1)
