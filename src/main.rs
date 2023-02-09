@@ -1,5 +1,6 @@
 use std::fs::OpenOptions;
 use std::io::prelude::*;
+use rand::{Rng, thread_rng};
 
 mod vector; //call a local module into this one with ; instead of {}
 use crate::vector::Vec3; // use the specific name here
@@ -26,6 +27,7 @@ fn main() {
     let image_height: u32 = 512;
 
     // Scene
+    let randomcolor: Color = Color::new(thread_rng().gen(), thread_rng().gen(), thread_rng().gen());
     let redish: Color = Color::new(0.9, 0.3, 0.3);
     let greenish: Color = Color::new(0.3, 0.9, 0.3);
     let bluish: Color = Color::new(0.3, 0.3, 0.9);
@@ -35,7 +37,7 @@ fn main() {
     let material3 = Diffuse{albedo: bluish};
     let material4 = Diffuse{albedo: Color::new(0.3, 0.3, 0.3)};
     let metal1 = Metal{albedo: Color::new(0.8, 0.8, 0.8), fuzz: 0.1};
-    let metal2 = Metal{albedo: yellowish, fuzz: 0.3};
+    let metal2 = Metal{albedo: randomcolor, fuzz: 0.3};
     
     let glass1 = Dielectric{refractive_index: 2.5};
     let glass2 = Dielectric{refractive_index: 2.5};
@@ -70,9 +72,10 @@ fn main() {
 
     let max_j = image_height;
     let max_i = image_width;
-    let spp: i32 = 50; // samples per pixel
+    let spp: i32 = 500; // samples per pixel
     // Render
     for j in 0..max_j {
+        print!("{} % \r", (100.0 * f64::from(j) / f64::from(max_j)) as u32);
         for i in 0..max_i {
             let mut pixel_color = Color::new(0.0, 0.0, 0.0);
             for _iter in 1..spp {
@@ -91,17 +94,15 @@ fn main() {
 
 
         };
-        print!("{} % \r", (100.0 * f64::from(j) / f64::from(max_j)) as u32);
     };
 }
 
 fn raytrace(ray: &Ray, scene: &Vec<Sphere>, scatter_depth: u8) -> Color {
-    let mut ray_color: Color = Color::new(0.0, 0.0, 0.0);
     if scatter_depth == 0 {
-        return ray_color;
+        return Color::new(0.0,0.0,0.0);
     }
     let mut param = FARAWAY;
-    let mut hit_rec = None;
+    let mut hit_rec: Option<&Sphere> = None;
     for hittable in scene {
         let test_param = hittable.intersect(ray);
 
@@ -113,25 +114,17 @@ fn raytrace(ray: &Ray, scene: &Vec<Sphere>, scatter_depth: u8) -> Color {
     if param != FARAWAY {
         let hit_obj = hit_rec.expect("hit object is None!");
         let scatter_loc: Vec3 = ray.position_at(param);
-        let scatter_ray: Ray = hit_obj.material.scatter(&ray, hit_obj, scatter_loc);
-        let scatter_color: Color = hit_obj.material.albedo() * raytrace(&scatter_ray, scene, scatter_depth - 1);
-
-        return scatter_color;
+        let scatter_ray: Ray = hit_obj.material.scatter(ray, hit_obj, scatter_loc);
+        return hit_obj.material.albedo() * raytrace(&scatter_ray, scene, scatter_depth - 1)
     }
-    else {
+    // Current calculation for sky color when no intersection is made
+    let t = 0.5 * (ray.dir.1 + 1.0);
 
-        // Current calculation for sky color when no intersection is made
-        let t = 0.5 * (ray.dir.1 + 1.0);
+    (1.0 - t) * Color{r: 1.0, g: 1.0, b: 1.0} + t* Color{r: 0.5, g: 0.7, b: 1.0}
 
-        ray_color += (1.0 - t) * Color{r: 1.0, g: 1.0, b: 1.0}
-                    + t* Color{r: 0.5, g: 0.7, b: 1.0};
-
-        return ray_color;
-    }
-    
 }
 
 
 fn color_to_ppm(col: Color) -> (u8, u8, u8) {
-    ((255.0 * col.r) as u8, (255.0*col.g) as u8, (255.0 * col.b) as u8)
+    ((255.0 * col.r.sqrt()) as u8, (255.0*col.g.sqrt()) as u8, (255.0 * col.b.sqrt()) as u8)
 }
