@@ -1,5 +1,6 @@
 use std::fs::OpenOptions;
 use std::io::prelude::*;
+use std::time::{Duration, Instant};
 use rand::{Rng, thread_rng};
 
 mod vector; //call a local module into this one with ; instead of {}
@@ -72,10 +73,12 @@ fn main() {
 
     let max_j = image_height;
     let max_i = image_width;
-    let spp: i32 = 500; // samples per pixel
+    let spp: u32 = 500; // samples per pixel
     // Render
+    println!("Starting render...");
+    println!("Computing with {} samples", image_height*image_width*spp);
+    let timer = Instant::now();
     for j in 0..max_j {
-        print!("{} % \r", (100.0 * f64::from(j) / f64::from(max_j)) as u32);
         for i in 0..max_i {
             let mut pixel_color = Color::new(0.0, 0.0, 0.0);
             for _iter in 1..spp {
@@ -95,6 +98,7 @@ fn main() {
 
         };
     };
+    println!("Render finished in {}s", timer.elapsed().as_secs());
 }
 
 fn raytrace(ray: &Ray, scene: &Vec<Sphere>, scatter_depth: u8) -> Color {
