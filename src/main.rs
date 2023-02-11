@@ -40,12 +40,12 @@ fn main() {
     let metal1 = Metal{albedo: Color::new(0.8, 0.8, 0.8), fuzz: 0.1};
     let metal2 = Metal{albedo: randomcolor, fuzz: 0.3};
     
-    let glass1 = Dielectric{refractive_index: 2.5};
-    let glass2 = Dielectric{refractive_index: 2.5};
+    let glass1 = Dielectric{refractive_index: 1.5};
+    let glass2 = Dielectric{refractive_index: 1.5};
 
-    let sphere1 = Sphere::new(Vec3(0.0, 0.0, 4.0), 0.5, glass1);
+    let sphere1 = Sphere::new(Vec3(0.0, 0.0, 4.0), 0.5, metal2);
     let sphere2 = Sphere::new(Vec3(0.7, -0.25, 0.7), 0.25, metal1);
-    let sphere3 = Sphere::new(Vec3(-0.5, 0.0, 0.7), 0.5, metal2);
+    let sphere3 = Sphere::new(Vec3(-0.5, 0.0, 0.7), 0.5, glass1);
     let ground_sphere= Sphere::new(Vec3(0.0, -100.5, 1.0), 100.0, material2);
 
     let inverted_sphere = Sphere::new(Vec3(0.0, 0.0, 2.0), -0.45, glass2);
@@ -54,7 +54,7 @@ fn main() {
 
     // Camera
     let cam_lookfrom = Vec3(0.0, 1.5, -5.0);
-    let aperture_radius = 0.3;
+    let aperture_radius = 0.2;
 
     // Camera_TEST
     let cam = Camera::new(Vec3(0.0, 0.0, 1.0), cam_lookfrom,
@@ -73,7 +73,7 @@ fn main() {
 
     let max_j = image_height;
     let max_i = image_width;
-    let spp: u32 = 500; // samples per pixel
+    let spp: u32 = 50; // samples per pixel
     // Render
     println!("Starting render...");
     println!("Computing with {} samples", image_height*image_width*spp);

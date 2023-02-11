@@ -33,7 +33,7 @@ impl Material {
             },
             Material::Dielectric{refractive_index: r_idx} => {
                 let scatter_normal = shape.normal_at(scatter_loc);
-                let inc_cos = scatter_normal.dotprod(&inc_ray.dir);
+                let inc_cos = scatter_normal.dotprod(&inc_ray.dir); // -ve the usual for most ray-tracers
                 let inc_dir_perp: Vec3 = inc_ray.dir - inc_cos*scatter_normal;
                 let mut refract_ratio = r_idx; // default ray going from inside to outside so fewer divisions
                 let sign_inc = inc_cos.signum(); // needed for determining scattered ray parallel direction
@@ -41,7 +41,7 @@ impl Material {
                 let scatter_dir_perp = refract_ratio * inc_dir_perp;
                 let scatter_sin2: f64 = scatter_dir_perp.dotprod(&scatter_dir_perp); // no sqrt needed
 
-                if scatter_sin2 > 1.0 {
+                if scatter_sin2 > 1.0 || schlick(inc_cos, refract_ratio)  {
                     // total internal reflection
                     let scatter_dir: Vec3 = inc_dir_perp - inc_cos * scatter_normal;
                     return Ray::new(scatter_loc, scatter_dir);
@@ -57,6 +57,14 @@ impl Material {
 
             }
         }
+}
+
+fn schlick(cosine: f64, r_idx: f64) -> bool {
+    let mut r0 = (1.0 - r_idx) / (1.0 + r_idx);
+    r0 = r0 * r0;
+    let reflectance: f64 = r0 + (1.0 - r0) * (1.0 - cosine.abs()).powi(5);
+    let drawn_prob = thread_rng().gen_range(0.0..1.0);
+    drawn_prob < reflectance
 }
 
 fn fuzzify(fuzziness: f64, scatter_dir: Vec3, scatter_normal: Vec3) -> Vec3 {
