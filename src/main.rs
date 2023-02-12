@@ -80,15 +80,14 @@ fn main() {
     let timer = Instant::now();
     for j in 0..max_j {
         for i in 0..max_i {
-            let mut pixel_color = Color::new(0.0, 0.0, 0.0);
-            for _iter in 1..spp {
-                let sample_position = cam.get_sample_loc(i,j);
-                let lens_sample_loc = cam.get_focus_loc();
-                let ray_direction = sample_position - lens_sample_loc;
+            let mut pixel_color: Color = (0..spp).map(|_| cam.get_focus_loc())
+                .map(|focus_loc| {
+                    Ray::new(focus_loc, cam.get_sample_loc(i,j) - focus_loc)
+                })
+                .fold(Color::new(0.0,0.0,0.0), |acc, r| {
+                    acc + raytrace(&r, &scene, 10)
+                });
 
-                let r = Ray::new(lens_sample_loc, ray_direction);
-                pixel_color += raytrace(&r, &scene, 10)
-            }
             pixel_color = (1.0/(spp as f64)) * pixel_color; // no Div defined for Color
             let color = color_to_ppm(pixel_color);
 
@@ -106,13 +105,10 @@ fn raytrace(ray: &Ray, scene: &Vec<Sphere>, scatter_depth: u8) -> Color {
         return Color::new(0.0,0.0,0.0);
     }
 
-    let hit_rec = scene.iter()
+    let (hit_obj, param) = scene.iter()
                         .map(|hittable| {(hittable, hittable.intersect(ray))})
                         .min_by(|x,y| {x.1.total_cmp(&y.1)})
-                        .expect("minimum hit object is None!");
-    
-    let hit_obj = hit_rec.0;
-    let param = hit_rec.1;
+                        .unwrap();
 
     if param != FARAWAY {
         let scatter_loc: Vec3 = ray.position_at(param);
