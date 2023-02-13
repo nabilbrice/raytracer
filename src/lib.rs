@@ -6,6 +6,9 @@ pub mod materials;
 pub mod camera;
 pub mod config;
 
+use std::fs::File;
+use std::io::Write;
+
 use vector::Vec3;
 use ray::Ray;
 use color::Color;
@@ -32,4 +35,28 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Sphere>, scatter_depth: u8) -> Color {
 
     (1.0 - t) * Color{r: 1.0, g: 1.0, b: 1.0} + t* Color{r: 0.5, g: 0.7, b: 1.0}
 
+}
+
+pub fn render_into_file(file: &mut File, cam: &camera::Camera, scene: &Vec<Sphere>, spp: u32) {
+    for j in 0..cam.vert_res {
+        for i in 0..cam.horiz_res {
+            let mut pixel_color: Color = (0..spp).map(|_| cam.get_focus_loc())
+                .map(|focus_loc| {
+                    Ray::new(focus_loc, cam.get_sample_loc(i,j) - focus_loc)
+                })
+                .fold(Color::new(0.0,0.0,0.0), |acc, r| {
+                    acc + raytrace(&r, &scene, 10)
+                });
+            
+            pixel_color = (1.0/(spp as f64)) * pixel_color; // no Div defined for Color
+            let color = color_to_ppm(pixel_color);
+            
+            writeln!(file, "{} {} {}", color.0, color.1, color.2)
+                .expect("Unable to write colors.");
+        };
+    };
+}
+
+pub fn color_to_ppm(col: Color) -> (u8, u8, u8) {
+    ((255.0 * col.r.sqrt()) as u8, (255.0*col.g.sqrt()) as u8, (255.0 * col.b.sqrt()) as u8)
 }
