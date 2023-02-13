@@ -1,0 +1,19 @@
+{   "camera": { "lookat": [0.0, 0.0, 1.0],
+                "lookfrom": [0.0, 1.5, -5.0],
+                "inv_focal_length": 1.0,
+                "aperture": 0.2,
+                "horiz_res": 512,
+                "vert_res": 512
+    },
+    "spheres": [
+        {"orig": [0.0,-100.5,-1.0], "radius": 100.0,
+        "material": {"Diffuse": {"albedo": {"r": 0.3, "g": 0.8, "b": 0.2}}}},
+        {"orig": [0.0,0.0,4.0], "radius": 0.5, 
+        "material": {"Metal": {"albedo": {"r": 0.2, "g": 0.4, "b": 0.8}, "fuzz": 0.3}}},
+        {"orig": [0.7,-0.25,0.7], "radius": 0.25, 
+        "material": {"Metal": {"albedo": {"r": 0.8, "g": 0.8, "b": 0.8}, "fuzz": 0.1}}},
+        {"orig": [-0.5,0.0,0.7], "radius": 0.5, 
+        "material": {"Dielectric": {"refractive_index": 1.5}}}
+    ]
+
+}
