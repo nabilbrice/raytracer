@@ -1,6 +1,7 @@
 use std::ops;
+use serde::{Serialize, Deserialize};
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Color {
     pub r: f64,
     pub g: f64,

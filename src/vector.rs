@@ -1,8 +1,9 @@
 use std::cmp::PartialEq;
 use std::ops;
 use std::fmt::{self, Formatter, Display};
+use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Vec3(pub f64, pub f64, pub f64);
 
 impl Display for Vec3 {

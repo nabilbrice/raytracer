@@ -1,3 +1,5 @@
+use serde::{Serialize, Deserialize};
+
 use crate::vector::Vec3;
 use crate::ray::Ray;
 use crate::materials::Material;
@@ -5,6 +7,7 @@ use crate::color::Color;
 
 pub const FARAWAY: f64 = 1.0e39;
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Sphere {
     pub orig: Vec3,
     pub radius: f64,

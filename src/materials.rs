@@ -1,9 +1,12 @@
+use serde::{Serialize, Deserialize};
+
 use crate::{vector::Vec3, geometry::Surface};
 use crate::geometry::Sphere;
 use crate::color::Color;
 use crate::ray::Ray;
 use rand::{Rng, thread_rng};
 
+#[derive(Debug, Serialize, Deserialize)]
 pub enum Material {
     Diffuse {albedo: Color},
     Metal {albedo: Color, fuzz: f64},
