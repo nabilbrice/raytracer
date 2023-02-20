@@ -54,9 +54,20 @@ pub fn render_into_file(file: &mut File, cam: &camera::Camera, scene: &Vec<Spher
             writeln!(file, "{} {} {}", color.0, color.1, color.2)
                 .expect("Unable to write colors.");
         };
+        eprint!("\rScanlines remaining: {}", cam.vert_res - j);
     };
+    eprintln!("");
 }
 
 pub fn color_to_ppm(col: Color) -> (u8, u8, u8) {
     ((255.0 * col.r.sqrt()) as u8, (255.0*col.g.sqrt()) as u8, (255.0 * col.b.sqrt()) as u8)
+}
+
+pub fn get_spp(mut args: impl Iterator<Item = String>) -> u32 {
+    args.next();
+
+    match args.next() {
+        Some(arg) => return arg.trim().parse().expect("cannot parse samples per pixel"),
+        None => return 10 as u32
+    }
 }
