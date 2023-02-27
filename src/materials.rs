@@ -1,25 +1,55 @@
 use serde::{Serialize, Deserialize};
 
+use crate::rgba_to_color;
 use crate::{vector::Vec3, geometry::Surface};
 use crate::geometry::Sphere;
 use crate::color::Color;
 use crate::ray::Ray;
 use rand::{Rng, thread_rng};
+use image::{DynamicImage, GenericImage, GenericImageView, ImageBuffer, RgbImage};
+use std::f64::consts::PI;
 
+use image::Rgba;
+
+#[serde_with::serde_as]
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Material {
     Diffuse {albedo: Color},
     Metal {albedo: Color, fuzz: f64},
     Dielectric {refractive_index: f64},
+    TextureMap {
+        #[serde_as(as = "TextureMapFilePath")]
+        map: DynamicImage,
+        orient_up: Vec3,
+        orient_around: Vec3,
+    },
 }
+
+fn load_image(path_to_file: &str) -> image::DynamicImage {
+    image::open(path_to_file).unwrap()
+}
+
+serde_with::serde_conv!(
+    TextureMapFilePath,
+    DynamicImage,
+    |_map: &DynamicImage| "texturemap.jpeg",
+    |path_to_file: &str| -> Result<_, std::convert::Infallible> {Ok(load_image(path_to_file))}
+);
+
 
 // Implement using enums?
 impl Material {
-    pub fn albedo(&self) -> Color {
-        match *self {
-            Material::Diffuse{albedo: color} => color,
-            Material::Metal{albedo: color, fuzz: _} => color,
+    pub fn albedo(&self, location: &Vec3) -> Color {
+        match self {
+            Material::Diffuse{albedo: color} => *color,
+            Material::Metal{albedo: color, fuzz: _} => *color,
             Material::Dielectric { refractive_index: _ } => Color::new(1.0, 1.0, 1.0),
+            Material::TextureMap {map: img, orient_up, orient_around} => {
+                let latitude: f64 = PI * orient_up.dotprod(&location) + PI;
+                let longitude: f64 = PI * orient_around.dotprod(&location) + PI;
+                let texture_color: Rgba<u8> = get_texture_rgba(&img, longitude, latitude);
+                rgba_to_color(texture_color)
+            },
         }
     }
     pub fn scatter<T: Surface>(&self, inc_ray: &Ray, shape: &T, scatter_loc: Vec3) -> Ray {
@@ -57,7 +87,10 @@ impl Material {
                     return Ray::new(scatter_loc, scatter_dir);
                 };
             },
-
+            Material::TextureMap { .. } => {
+                let scatter_dir = shape.normal_at(scatter_loc) + random_vec3();
+                return Ray::new(scatter_loc, scatter_dir)
+            },
             }
         }
 }
@@ -84,6 +117,15 @@ fn random_vec3() -> Vec3 {
         return random_vec3();
     };
     return rand_vec3.normalize();
+}
+
+fn get_texture_rgba(image: &DynamicImage, longitude_rad: f64, latitude_rad: f64) -> Rgba<u8> {
+    let dimensions: (u32, u32) = image.dimensions();
+
+    let (pixel_column, pixel_row): (f64, f64) =
+        (longitude_rad / PI * (dimensions.0 as f64), 0.5 * latitude_rad / PI * (dimensions.1 as f64));
+
+    image.get_pixel(pixel_column as u32 % dimensions.0, pixel_row as u32 % dimensions.1)
 }
 
 #[test]

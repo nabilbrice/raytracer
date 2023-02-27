@@ -28,7 +28,8 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Sphere>, scatter_depth: u8) -> Color {
     if param != FARAWAY {
         let scatter_loc: Vec3 = ray.position_at(param);
         let scatter_ray: Ray = hit_obj.material.scatter(ray, hit_obj, scatter_loc);
-        return hit_obj.material.albedo() * raytrace(&scatter_ray, scene, scatter_depth - 1)
+        let obj_relative_loc = (scatter_loc - hit_obj.orig).normalize();
+        return hit_obj.material.albedo(&obj_relative_loc) * raytrace(&scatter_ray, scene, scatter_depth - 1)
     }
     // Current calculation for sky color when no intersection is made
     let t = 0.5 * (ray.dir.1 + 1.0);
@@ -61,6 +62,10 @@ pub fn render_into_file(file: &mut File, cam: &camera::Camera, scene: &Vec<Spher
 
 pub fn color_to_ppm(col: Color) -> (u8, u8, u8) {
     ((255.0 * col.r.sqrt()) as u8, (255.0*col.g.sqrt()) as u8, (255.0 * col.b.sqrt()) as u8)
+}
+
+pub fn rgba_to_color(rgba: image::Rgba<u8>) -> Color {
+    Color::new((rgba[0] as f64) / 255.0, (rgba[1] as f64) / 255.0, (rgba[2] as f64) / 255.0)
 }
 
 pub fn get_spp(mut args: impl Iterator<Item = String>) -> u32 {
