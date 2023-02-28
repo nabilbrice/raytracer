@@ -6,7 +6,7 @@ use crate::geometry::Sphere;
 use crate::color::Color;
 use crate::ray::Ray;
 use rand::{Rng, thread_rng};
-use image::{DynamicImage, GenericImage, GenericImageView, ImageBuffer, RgbImage};
+use image::{DynamicImage, GenericImageView};
 use std::f64::consts::PI;
 
 use image::Rgba;
@@ -45,8 +45,10 @@ impl Material {
             Material::Metal{albedo: color, fuzz: _} => *color,
             Material::Dielectric { refractive_index: _ } => Color::new(1.0, 1.0, 1.0),
             Material::TextureMap {map: img, orient_up, orient_around} => {
-                let latitude: f64 = PI * orient_up.dotprod(&location) + PI;
-                let longitude: f64 = PI * orient_around.dotprod(&location) + PI;
+                // TODO: use correct spherical coordinates for texture map
+                let latitude: f64 = orient_up.normalize().dotprod(&location).acos();
+                let orient_axes: (Vec3, Vec3) = (orient_around.normalize(), orient_up.normalize().cross(&orient_around.normalize()));
+                let longitude: f64 = orient_axes.0.dotprod(&location).atan2(orient_axes.1.dotprod(&location)) + PI;
                 let texture_color: Rgba<u8> = get_texture_rgba(&img, longitude, latitude);
                 rgba_to_color(texture_color)
             },
@@ -123,7 +125,7 @@ fn get_texture_rgba(image: &DynamicImage, longitude_rad: f64, latitude_rad: f64)
     let dimensions: (u32, u32) = image.dimensions();
 
     let (pixel_column, pixel_row): (f64, f64) =
-        (longitude_rad / PI * (dimensions.0 as f64), 0.5 * latitude_rad / PI * (dimensions.1 as f64));
+        (0.5 * longitude_rad / PI * (dimensions.0 as f64), latitude_rad / PI * (dimensions.1 as f64));
 
     image.get_pixel(pixel_column as u32 % dimensions.0, pixel_row as u32 % dimensions.1)
 }
