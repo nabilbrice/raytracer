@@ -26,7 +26,7 @@ pub enum Material {
 }
 
 fn load_image(path_to_file: &str) -> image::DynamicImage {
-    image::open(path_to_file).unwrap()
+    image::open(path_to_file).expect("cannot open file")
 }
 
 serde_with::serde_conv!(
@@ -45,7 +45,6 @@ impl Material {
             Material::Metal{albedo: color, fuzz: _} => *color,
             Material::Dielectric { refractive_index: _ } => Color::new(1.0, 1.0, 1.0),
             Material::TextureMap {map: img, orient_up, orient_around} => {
-                // TODO: use correct spherical coordinates for texture map
                 let latitude: f64 = orient_up.normalize().dotprod(&location).acos();
                 let orient_axes: (Vec3, Vec3) = (orient_around.normalize(), orient_up.normalize().cross(&orient_around.normalize()));
                 let longitude: f64 = orient_axes.0.dotprod(&location).atan2(orient_axes.1.dotprod(&location)) + PI;

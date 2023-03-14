@@ -32,10 +32,6 @@ mod tests {
     use super::*;
     use std::fs;
 
-    use crate::materials::Material;
-    use crate::vector::Vec3;
-    use crate::color::Color;
-
     #[test]
     fn load_config_test() {
         let config_contents = fs::read("./scene.json").expect("unable to read message");

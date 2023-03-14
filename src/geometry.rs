@@ -49,10 +49,22 @@ pub trait Surface {
     fn normal_at(&self, surface_pos: Vec3) -> Vec3;
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-#[test]
-fn normal_test() {
-    let mat = Material::Diffuse { albedo: Color{r: 1.0,g: 1.0,b: 1.0} };
-    let sph = Sphere::new(Vec3(0.0,0.0,0.0), 2.0, mat);
-    assert_eq!(sph.normal_at(Vec3(2.0,0.0,0.0)), Vec3(1.0,0.0,0.0));
+    #[test]
+    fn normal_test() {
+        let mat = Material::Diffuse { albedo: Color{r: 1.0,g: 1.0,b: 1.0} };
+        let sph = Sphere::new(Vec3(0.0,0.0,0.0), 2.0, mat);
+        assert_eq!(sph.normal_at(Vec3(2.0,0.0,0.0)), Vec3(1.0,0.0,0.0));
+    }
+
+    #[test]
+    fn intersect_test() {
+        let mat = Material::Diffuse{albedo: Color{r: 1.0, g: 1.0, b: 1.0}};
+        let sph = Sphere::new(Vec3(0.0,0.0,0.0), 2.0, mat);
+        let ray = Ray::new(Vec3(0.0,0.0,-3.0), Vec3(0.0,0.0,1.0));
+        assert_eq!(sph.intersect(&ray), 1.0);
+    }
 }

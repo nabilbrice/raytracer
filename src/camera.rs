@@ -72,3 +72,14 @@ fn random_in_disc() -> [f64;2] {
     };
     return rng_scalars;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn random_in_disc_test() {
+        let point = random_in_disc();
+        assert!(point[0]*point[0] + point[1]*point[1] <= 1.0, "picked point out of disc")
+    }
+}
