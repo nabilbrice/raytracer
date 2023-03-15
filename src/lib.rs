@@ -8,7 +8,6 @@ pub mod config;
 
 use std::fs::File;
 use std::io::Write;
-use clap::Parser;
 
 use vector::Vec3;
 use ray::Ray;
@@ -67,20 +66,4 @@ pub fn color_to_ppm(col: Color) -> (u8, u8, u8) {
 
 pub fn rgba_to_color(rgba: image::Rgba<u8>) -> Color {
     Color::new((rgba[0] as f64) / 255.0, (rgba[1] as f64) / 255.0, (rgba[2] as f64) / 255.0)
-}
-
-pub fn get_spp(mut args: impl Iterator<Item = String>) -> u32 {
-    args.next();
-
-    match args.next() {
-        Some(arg) => return arg.trim().parse().expect("cannot parse samples per pixel"),
-        None => return 10 as u32
-    }
-}
-
-#[derive(Parser)]
-#[command(author="Nabil", version="0.1.0", about, long_about=None)]
-pub struct Cli{
-    #[arg(short='s', long="samples", default_value_t=10)]
-    pub samples_per_pixel: u32
 }
