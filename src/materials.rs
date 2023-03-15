@@ -91,8 +91,8 @@ impl Material {
                 let scatter_dir = shape.normal_at(scatter_loc) + random_vec3();
                 return Ray::new(scatter_loc, scatter_dir)
             },
-            Material::Emitter { .. } => {
-                return Ray::new(Vec3(0.0,0.0,0.0), Vec3(0.0,0.0,0.0))
+            _ => {
+                panic!("Attempted to access scatter for Material without scattering implemented")
             },
             }
         }

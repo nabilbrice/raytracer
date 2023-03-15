@@ -39,9 +39,10 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Sphere>, scatter_depth: u8) -> Color {
     }
 
     // Current calculation for sky color when no intersection is made
-    let t = 0.5 * (ray.dir.1 + 1.0);
+    //let t = 0.5 * (ray.dir.1 + 1.0);
 
-    (1.0 - t) * Color{r: 1.0, g: 1.0, b: 1.0} + t* Color{r: 0.5, g: 0.7, b: 1.0}
+    //(1.0 - t) * Color{r: 1.0, g: 1.0, b: 1.0} + t* Color{r: 0.5, g: 0.7, b: 1.0}
+    Color{r: 0.0, g: 0.0, b: 0.0}
 
 }
 
