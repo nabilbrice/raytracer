@@ -1,8 +1,7 @@
 use serde::{Serialize, Deserialize};
 
-use crate::rgba_to_color;
+use crate::{rgba_to_color, color};
 use crate::{vector::Vec3, geometry::Surface};
-use crate::geometry::Sphere;
 use crate::color::Color;
 use crate::ray::Ray;
 use rand::{Rng, thread_rng};
@@ -23,6 +22,7 @@ pub enum Material {
         orient_up: Vec3,
         orient_around: Vec3,
     },
+    Emitter {albedo: Color},
 }
 
 fn load_image(path_to_file: &str) -> image::DynamicImage {
@@ -36,8 +36,6 @@ serde_with::serde_conv!(
     |path_to_file: &str| -> Result<_, std::convert::Infallible> {Ok(load_image(path_to_file))}
 );
 
-
-// Implement using enums?
 impl Material {
     pub fn albedo(&self, location: &Vec3) -> Color {
         match self {
@@ -51,6 +49,7 @@ impl Material {
                 let texture_color: Rgba<u8> = get_texture_rgba(&img, longitude, latitude);
                 rgba_to_color(texture_color)
             },
+            Material::Emitter{albedo: color} => *color,
         }
     }
     pub fn scatter<T: Surface>(&self, inc_ray: &Ray, shape: &T, scatter_loc: Vec3) -> Ray {
@@ -91,6 +90,9 @@ impl Material {
             Material::TextureMap { .. } => {
                 let scatter_dir = shape.normal_at(scatter_loc) + random_vec3();
                 return Ray::new(scatter_loc, scatter_dir)
+            },
+            Material::Emitter { .. } => {
+                return Ray::new(Vec3(0.0,0.0,0.0), Vec3(0.0,0.0,0.0))
             },
             }
         }

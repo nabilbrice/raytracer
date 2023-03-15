@@ -3,7 +3,6 @@ use serde::{Serialize, Deserialize};
 use crate::vector::Vec3;
 use crate::ray::Ray;
 use crate::materials::Material;
-use crate::color::Color;
 
 pub const FARAWAY: f64 = 1.0e39;
 
@@ -52,6 +51,7 @@ pub trait Surface {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::color::Color;
 
     #[test]
     fn normal_test() {

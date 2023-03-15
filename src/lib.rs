@@ -13,6 +13,7 @@ use vector::Vec3;
 use ray::Ray;
 use color::Color;
 use geometry::{Sphere, FARAWAY};
+use materials::Material;
 
 
 pub fn raytrace(ray: &Ray, scene: &Vec<Sphere>, scatter_depth: u8) -> Color {
@@ -25,12 +26,18 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Sphere>, scatter_depth: u8) -> Color {
                         .min_by(|x,y| {x.1.total_cmp(&y.1)})
                         .unwrap();
 
-    if param != FARAWAY {
-        let scatter_loc: Vec3 = ray.position_at(param);
-        let scatter_ray: Ray = hit_obj.material.scatter(ray, hit_obj, scatter_loc);
-        let obj_relative_loc = (scatter_loc - hit_obj.orig).normalize();
-        return hit_obj.material.albedo(&obj_relative_loc) * raytrace(&scatter_ray, scene, scatter_depth - 1)
+    match hit_obj.material {
+        Material::Emitter{albedo} => { return albedo },
+        _ => {
+            if param != FARAWAY {
+                let scatter_loc: Vec3 = ray.position_at(param);
+                let scatter_ray: Ray = hit_obj.material.scatter(ray, hit_obj, scatter_loc);
+                let obj_relative_loc = (scatter_loc - hit_obj.orig).normalize();
+                return hit_obj.material.albedo(&obj_relative_loc) * raytrace(&scatter_ray, scene, scatter_depth - 1)
+            }
+        }
     }
+
     // Current calculation for sky color when no intersection is made
     let t = 0.5 * (ray.dir.1 + 1.0);
 
