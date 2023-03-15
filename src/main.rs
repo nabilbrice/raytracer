@@ -3,6 +3,7 @@ use std::fs;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::time::Instant;
+use clap::Parser;
 
 use raytracer::config::Config;
 
@@ -26,7 +27,8 @@ fn main() {
     write!(file, "{}", header)
         .expect("Unable to write header to ppm");
 
-    let spp: u32 = raytracer::get_spp(env::args()); // samples per pixel, default set at 10
+    let cli_args = raytracer::Cli::parse();
+    let spp: u32 = cli_args.samples_per_pixel; // samples per pixel, default set at 10
     // Render
     println!("Starting render...");
     println!("Computing with {} samples", &cam.horiz_res*&cam.vert_res*spp);

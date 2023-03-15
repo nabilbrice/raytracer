@@ -1,4 +1,4 @@
-pub mod vector; //call a local module into this one with ; instead of {}
+pub mod vector;
 pub mod color;
 pub mod ray;
 pub mod geometry;
@@ -8,6 +8,7 @@ pub mod config;
 
 use std::fs::File;
 use std::io::Write;
+use clap::Parser;
 
 use vector::Vec3;
 use ray::Ray;
@@ -75,4 +76,11 @@ pub fn get_spp(mut args: impl Iterator<Item = String>) -> u32 {
         Some(arg) => return arg.trim().parse().expect("cannot parse samples per pixel"),
         None => return 10 as u32
     }
+}
+
+#[derive(Parser)]
+#[command(author="Nabil", version="0.1.0", about, long_about=None)]
+pub struct Cli{
+    #[arg(short='s', long="samples", default_value_t=10)]
+    pub samples_per_pixel: u32
 }
