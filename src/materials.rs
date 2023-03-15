@@ -129,29 +129,6 @@ fn get_texture_rgba(image: &DynamicImage, longitude_rad: f64, latitude_rad: f64)
     image.get_pixel(pixel_column as u32 % dimensions.0, pixel_row as u32 % dimensions.1)
 }
 
-#[test]
-fn test_scattering() {
-    let mat = Material::Dielectric{ refractive_index: 1.5};
-    let sph = Sphere::new(Vec3(0.0,0.0,0.0), 0.5, mat);
-    let incoming_ray = Ray::new(Vec3(0.42,0.0,-10.0),Vec3(0.0,0.0,1.0));
-    let intersection = sph.intersect(&incoming_ray);
-    let point = incoming_ray.position_at(intersection);
-    let scattered_ray = sph.material.scatter(&incoming_ray, &sph, point);
-    println!("{:?}", scattered_ray.orig);
-    println!("{:?}", scattered_ray.dir);
-    let second_intersection = sph.intersect(&scattered_ray);
-    let second_point = scattered_ray.position_at(second_intersection);
-    let second_scattered_ray = sph.material.scatter(&scattered_ray, &sph, second_point);
-    println!("{:?}",second_scattered_ray.orig);
-    println!("{:?}",second_scattered_ray.dir);
-    let third_intersection = sph.intersect(&second_scattered_ray);
-    let third_point = second_scattered_ray.position_at(third_intersection);
-    let third_scattered_ray = sph.material.scatter(&second_scattered_ray, &sph, third_point);
-    println!("{:?}",third_scattered_ray.orig);
-    println!("{:?}",third_scattered_ray.dir);
-    let trial_ray = Ray::new(Vec3(0.4,0.0,0.0), Vec3(0.0,0.0,-1.0));
-    let trial_intersection = sph.intersect(&trial_ray);
-    let trial_point = trial_ray.position_at(trial_intersection);
-    let new_ray = sph.material.scatter(&trial_ray, &sph, trial_point);
-    println!("{:?}", new_ray.orig);
+#[cfg(test)]
+mod tests {
 }

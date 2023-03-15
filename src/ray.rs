@@ -13,3 +13,14 @@ impl Ray {
         self.orig + t * self.dir
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn position_test() {
+        let ray1 = Ray::new(Vec3(0.0,0.0,0.0), Vec3(1.0,0.0,0.0));
+        assert_eq!(ray1.position_at(0.5), Vec3(0.5,0.0,0.0))
+    }
+}
