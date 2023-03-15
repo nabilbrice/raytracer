@@ -108,8 +108,27 @@ pub fn lerp_vec3(p: Vec3, q: Vec3, t: f64) -> Vec3 {
     ((1.0 - t) * p) + (t * q)
 }
 
-#[test]
-fn norm_test() {
-    let u = Vec3(3.0,4.0,0.0);
-    assert_eq!(u.norm(), 5.0)
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn norm_test() {
+        let u = Vec3(3.0,4.0,0.0);
+        assert_eq!(u.norm(), 5.0)
+    }
+
+    #[test]
+    fn dotprod_test() {
+        let u = Vec3(1.0, 0.0, 0.0);
+        let v = Vec3(0.5, 0.0, 0.0);
+        assert_eq!(u.dotprod(&v), 0.5)
+    }
+
+    #[test]
+    fn cross_test() {
+        let u = Vec3(1.0, 0.0, 0.0);
+        let v = Vec3(0.0, 1.0, 0.0);
+        assert_eq!(u.cross(&v), Vec3(0.0, 0.0, 1.0))
+    }
 }
