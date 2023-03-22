@@ -13,7 +13,7 @@ fn main() {
     let de_config = serde_json::from_slice::<Config>(&config_contents)
         .expect("unable to deserialize scene information");
 
-    let scene = de_config.spheres;
+    let scene = de_config.hittables;
     let cam = de_config.camera.setup();
 
     let mut file = OpenOptions::new()

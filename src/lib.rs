@@ -12,17 +12,24 @@ use std::io::Write;
 use vector::Vec3;
 use ray::Ray;
 use color::Color;
-use geometry::{Sphere, FARAWAY};
+use geometry::{Shape, FARAWAY};
 use materials::Material;
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Hittable {
+    shape: Shape,
+    material: Material,
+}
 
 
-pub fn raytrace(ray: &Ray, scene: &Vec<Sphere>, scatter_depth: u8) -> Color {
+pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8) -> Color {
     if scatter_depth == 0 {
         return Color::new(0.0,0.0,0.0);
     }
 
     let (hit_obj, param) = scene.iter()
-                        .map(|hittable| {(hittable, hittable.intersect(ray))})
+                        .map(|hittable| {(hittable, hittable.shape.intersect(ray))})
                         .min_by(|x,y| {x.1.total_cmp(&y.1)})
                         .unwrap();
 
@@ -31,22 +38,27 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Sphere>, scatter_depth: u8) -> Color {
         _ => {
             if param != FARAWAY {
                 let scatter_loc: Vec3 = ray.position_at(param);
-                let scatter_ray: Ray = hit_obj.material.scatter(ray, hit_obj, scatter_loc);
-                let obj_relative_loc = (scatter_loc - hit_obj.orig).normalize();
+                let scatter_ray: Ray = hit_obj.material.scatter(ray, &hit_obj.shape, scatter_loc);
+                let obj_relative_loc: Vec3;
+                match &hit_obj.shape {
+                    Shape::Sphere(sphere) => obj_relative_loc = (scatter_loc - sphere.centre).normalize(),
+                    Shape::Disc(disc) => obj_relative_loc = scatter_loc - disc.centre,
+                }
                 return hit_obj.material.albedo(&obj_relative_loc) * raytrace(&scatter_ray, scene, scatter_depth - 1)
             }
         }
     }
 
     // Current calculation for sky color when no intersection is made
-    //let t = 0.5 * (ray.dir.1 + 1.0);
+    
+    let t = 0.5 * (ray.dir.1 + 1.0);
 
-    //(1.0 - t) * Color{r: 1.0, g: 1.0, b: 1.0} + t* Color{r: 0.5, g: 0.7, b: 1.0}
-    Color{r: 0.0, g: 0.0, b: 0.0}
+    (1.0 - t) * Color{r: 1.0, g: 1.0, b: 1.0} + t* Color{r: 0.5, g: 0.7, b: 1.0}
+    // Color{r: 0.0, g: 0.0, b: 0.0}
 
 }
 
-pub fn render_into_file(file: &mut File, cam: &camera::Camera, scene: &Vec<Sphere>, spp: u32) {
+pub fn render_into_file(file: &mut File, cam: &camera::Camera, scene: &Vec<Hittable>, spp: u32) {
     for j in 0..cam.vert_res {
         for i in 0..cam.horiz_res {
             let mut pixel_color: Color = (0..spp).map(|_| cam.get_focus_loc())

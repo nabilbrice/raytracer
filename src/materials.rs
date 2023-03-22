@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 
 use crate::{rgba_to_color, color};
-use crate::{vector::Vec3, geometry::Surface};
+use crate::{vector::Vec3, geometry::Shape};
 use crate::color::Color;
 use crate::ray::Ray;
 use rand::{Rng, thread_rng};
@@ -52,7 +52,7 @@ impl Material {
             Material::Emitter{albedo: color} => *color,
         }
     }
-    pub fn scatter<T: Surface>(&self, inc_ray: &Ray, shape: &T, scatter_loc: Vec3) -> Ray {
+    pub fn scatter(&self, inc_ray: &Ray, shape: &Shape, scatter_loc: Vec3) -> Ray {
         match *self {
             Material::Diffuse{albedo: _} => {
                 let scatter_dir = shape.normal_at(scatter_loc) + random_vec3();

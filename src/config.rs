@@ -1,13 +1,13 @@
 use serde::{Serialize, Deserialize};
 
-use crate::geometry::Sphere;
 use crate::vector::Vec3;
 use crate::camera::Camera;
+use crate::Hittable;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     pub camera: SetupCamera,
-    pub spheres: Vec<Sphere>,
+    pub hittables: Vec<Hittable>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -35,6 +35,5 @@ mod tests {
     #[test]
     fn load_config_test() {
         let config_contents = fs::read("./scene.json").expect("unable to read message");
-        let deser = serde_json::from_slice::<Config>(&config_contents);
     }
 }
