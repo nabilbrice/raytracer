@@ -36,13 +36,9 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8) -> Color {
 
         if param != FARAWAY {
             let scatter_loc: Vec3 = ray.position_at(param);
-            match hit_obj.material {
-                Material::Emitter{albedo} => {
+            if let Material::Emitter{albedo} = hit_obj.material {
                     let cosine: f64 = ray.dir.dotprod(&hit_obj.shape.normal_at(scatter_loc));
-                    return albedo * cosine.abs()
-                },
-                _ => {},
-            }
+                    return albedo * cosine.abs() };
             let scatter_ray: Ray = hit_obj.material.scatter(ray, &hit_obj.shape, scatter_loc);
             let obj_relative_loc: Vec3;
             match &hit_obj.shape {
