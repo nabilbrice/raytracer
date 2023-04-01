@@ -60,8 +60,8 @@ impl Sphere {
         if t_smaller > 0.0 {
             return t_smaller;
         };
-        let h = t_smaller + sq;
-        if h > 1.0e-6 { h } else {FARAWAY} // 1.0e-6 to avoid self-intersection
+        let t_larger = t_smaller + sq;
+        if t_larger > 1.0e-6 { t_larger } else {FARAWAY} // 1.0e-6 to avoid self-intersection
     }
 
     pub fn normal_at(&self, surface_pos: Vec3) -> Vec3 {
@@ -108,6 +108,14 @@ mod tests {
         let sph = Sphere::new(Vec3(0.0,0.0,0.0), 2.0);
         let ray = Ray::new(Vec3(0.0,0.0,-3.0), Vec3(0.0,0.0,1.0));
         assert_eq!(sph.intersect(&ray), 1.0);
+    }
+
+    #[test]
+
+    fn sphere_non_intersection_test() {
+        let sph = Sphere::new(Vec3(0.0,0.0,0.0), 1.0);
+        let ray = Ray::new(Vec3(2.0,0.0,0.0), Vec3(1.0,0.0,0.0));
+        assert_eq!(sph.intersect(&ray), FARAWAY);
     }
 
     #[test]
