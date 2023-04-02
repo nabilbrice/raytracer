@@ -40,5 +40,7 @@ fn main() {
 #[command(author="Nabil", version="0.1.0", about, long_about=None)]
 pub struct Cli{
     #[arg(short='s', long="samples", default_value_t=10)]
-    pub samples_per_pixel: u32
+    pub samples_per_pixel: u32,
+    #[arg(short='b', long="bins", default_value_t=3)]
+    pub bins: usize,
 }

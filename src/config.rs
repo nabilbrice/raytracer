@@ -29,11 +29,10 @@ impl SetupCamera {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::fs;
 
     #[test]
     fn load_config_test() {
-        let config_contents = fs::read("./scene.json").expect("unable to read message");
+        fs::read("./scene.json").expect("unable to read message");
     }
 }

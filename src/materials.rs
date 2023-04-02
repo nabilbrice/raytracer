@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 
-use crate::{rgba_to_color, color};
+use crate::{rgba_to_color};
 use crate::{vector::Vec3, geometry::Shape};
 use crate::color::Color;
 use crate::ray::Ray;
@@ -41,7 +41,7 @@ impl Material {
         match self {
             Material::Diffuse{albedo: color} => *color,
             Material::Metal{albedo: color, fuzz: _} => *color,
-            Material::Dielectric { refractive_index: _ } => Color::new(1.0, 1.0, 1.0),
+            Material::Dielectric { refractive_index: _ } => Color::new([1.0, 1.0, 1.0]),
             Material::TextureMap {map: img, orient_up, orient_around} => {
                 let latitude: f64 = orient_up.normalize().dotprod(&location).acos();
                 let orient_axes: (Vec3, Vec3) = (orient_around.normalize(), orient_up.normalize().cross(&orient_around.normalize()));

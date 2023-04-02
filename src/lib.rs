@@ -25,7 +25,7 @@ pub struct Hittable {
 
 pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8) -> Color {
     if scatter_depth == 0 {
-        return Color::new(0.0,0.0,0.0);
+        return Color::new([0.0,0.0,0.0]);
     }
 
     let (hit_obj, param) = scene.iter()
@@ -53,7 +53,7 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8) -> Color {
 
     let t = 0.5 * (ray.dir.1 + 1.0);
 
-    (1.0 - t) * Color{r: 1.0, g: 1.0, b: 1.0} + t* Color{r: 0.5, g: 0.7, b: 1.0}
+    (1.0 - t) * Color::new([1.0,1.0,1.0]) + t* Color::new([0.5, 0.7, 1.0])
     // Color{r: 0.0, g: 0.0, b: 0.0}
 
 }
@@ -65,7 +65,7 @@ pub fn render_into_file(file: &mut File, cam: &camera::Camera, scene: &Vec<Hitta
                 .map(|focus_loc| {
                     Ray::new(focus_loc, cam.get_sample_loc(i,j) - focus_loc)
                 })
-                .fold(Color::new(0.0,0.0,0.0), |acc, r| {
+                .fold(Color::new([0.0,0.0,0.0]), |acc, r| {
                     acc + raytrace(&r, &scene, 10)
                 });
             
@@ -80,10 +80,11 @@ pub fn render_into_file(file: &mut File, cam: &camera::Camera, scene: &Vec<Hitta
     eprintln!("");
 }
 
+
 pub fn color_to_ppm(col: Color) -> (u8, u8, u8) {
-    ((255.0 * col.r.sqrt()) as u8, (255.0*col.g.sqrt()) as u8, (255.0 * col.b.sqrt()) as u8)
+    ((255.0 * col.bin[0].sqrt()) as u8, (255.0*col.bin[1].sqrt()) as u8, (255.0 * col.bin[2].sqrt()) as u8)
 }
 
 pub fn rgba_to_color(rgba: image::Rgba<u8>) -> Color {
-    Color::new((rgba[0] as f64) / 255.0, (rgba[1] as f64) / 255.0, (rgba[2] as f64) / 255.0)
+    Color::new([(rgba[0] as f64) / 255.0, (rgba[1] as f64) / 255.0, (rgba[2] as f64) / 255.0])
 }
