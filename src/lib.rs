@@ -38,9 +38,9 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8) -> Color {
             let scatter_loc: Vec3 = ray.position_at(param);
             if let Material::Emitter(emitter) = &hit_obj.material {
                 match emitter {
-                    Emitter::Blackbody{temperature: _ } => {
+                    _ => {
                         let cosine: f64 = ray.dir.dotprod(&hit_obj.shape.normal_at(scatter_loc));
-                        return emitter.spectrum() * cosine.abs() }
+                        return emitter.spectrum(&scatter_loc) * cosine.abs() },
                 }
             }
             let scatter_ray: Ray = hit_obj.material.scatter(ray, &hit_obj.shape, scatter_loc);

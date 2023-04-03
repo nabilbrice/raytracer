@@ -12,23 +12,40 @@ use std::io::{BufRead, BufReader};
 
 use image::Rgba;
 
+#[serde_with::serde_as]
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Emitter {
     Blackbody {temperature: f64},
+    TemperatureMap {
+        #[serde_as(as = "TemperatureMapFilePath")]
+        map: Vec<Vec<f64>>,
+        orient_up: Vec3,
+        orient_around: Vec3,
+    },
+}
+
+fn blackbody(temperature: f64) -> Color {
+    // The flux is not using a normalization
+    let flux = |energy: f64| energy.powi(3)/((energy / temperature).exp() - 1.0);
+    let mut bin = [0.0;NUMBER_OF_BINS];
+    let energy_bins = logspace::<NUMBER_OF_BINS>(0.1,20.0);
+    for i in 0..NUMBER_OF_BINS {
+        bin[i] = flux(energy_bins[i])
+    }
+    Color::new(bin) 
 }
 
 impl Emitter {
-    pub fn spectrum(&self) -> Color {
+    pub fn spectrum(&self, location: &Vec3) -> Color {
         match self {
-            Emitter::Blackbody {temperature} => {
-                // The flux is not using a normalization
-                let flux = |energy: f64| energy.powi(3)/((energy / temperature).exp() - 1.0);
-                let mut bin = [0.0;NUMBER_OF_BINS];
-                let energy_bins = logspace::<NUMBER_OF_BINS>(0.1,20.0);
-                for i in 0..NUMBER_OF_BINS {
-                    bin[i] = flux(energy_bins[i])
-                }
-                Color::new(bin)
+            Emitter::Blackbody {temperature} => { blackbody(*temperature) },
+            Emitter::TemperatureMap{map, orient_up, orient_around} => {
+                let latitude: f64 = orient_up.normalize().dotprod(&location).acos();
+                let orient_axes: (Vec3, Vec3) = (orient_around.normalize(), orient_up.normalize().cross(&orient_around.normalize()));
+                let longitude: f64 = orient_axes.0.dotprod(&location).atan2(orient_axes.1.dotprod(&location)) + PI;
+
+                let temperature = get_temperature(map, latitude, longitude)*10.0;
+                blackbody(temperature)
             }
         }
     }
@@ -57,8 +74,8 @@ fn load_data(path_to_file: &str) -> Vec<Vec<f64>> {
     let f = BufReader::new(File::open(path_to_file).unwrap());
 
     let temperatures: Vec<Vec<f64>> = f.lines()
-        .map(|line| line.unwrap().split(' ')
-            .map(|value| value.parse().unwrap()).collect())
+        .map(|line| line.unwrap().split("    ") // tempmap has 4 space delimiter
+            .map(|value| value.parse().unwrap_or(0.0)).collect())
         .collect();
     temperatures
 }
@@ -68,6 +85,13 @@ serde_with::serde_conv!(
     DynamicImage,
     |_map: &DynamicImage| "texturemap.jpeg",
     |path_to_file: &str| -> Result<_, std::convert::Infallible> {Ok(load_image(path_to_file))}
+);
+
+serde_with::serde_conv!(
+    TemperatureMapFilePath,
+    Vec<Vec<f64>>,
+    |_map: &[Vec<f64>]| "tempmap.dat",
+    |path_to_file: &str| -> Result<_, std::convert::Infallible> {Ok(load_data(path_to_file))}
 );
 
 impl Material {
@@ -83,7 +107,7 @@ impl Material {
                 let texture_color: Rgba<u8> = get_texture_rgba(&img, longitude, latitude);
                 rgba_to_color(texture_color)
             },
-            Material::Emitter(emitter) => emitter.spectrum(),
+            Material::Emitter(emitter) => emitter.spectrum(location),
         }
     }
     pub fn scatter(&self, inc_ray: &Ray, shape: &Shape, scatter_loc: Vec3) -> Ray {
@@ -165,19 +189,12 @@ fn get_texture_rgba(image: &DynamicImage, longitude_rad: f64, latitude_rad: f64)
     image.get_pixel(pixel_column as u32 % dimensions.0, pixel_row as u32 % dimensions.1)
 }
 
-fn get_temperature(map: &[Vec<f64>], row: usize, column: usize) -> f64 {
-    let row_access = row % map.len();
-    let column_access = column % map[row_access].len();
+fn get_temperature(map: &[Vec<f64>], latitude_rad: f64, longitude_rad: f64) -> f64 {
+    let row_access = (latitude_rad / PI * (map.len() as f64)) as usize % map.len();
+    let column_access = (0.5 * longitude_rad / PI * (map[row_access].len() as f64)) as usize % map[row_access].len();
     map[row_access][column_access]
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    #[test]
-    fn get_temperatures_test() {
-        let data = vec![vec![1.0,2.0,3.0,4.0], vec![10.0,20.0,30.0,40.0,50.0]];
-        assert_eq!(get_temperature(data.as_slice(), 2, 5), 2.0)
-    }
 }
