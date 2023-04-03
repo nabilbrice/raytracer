@@ -13,7 +13,7 @@ use vector::Vec3;
 use ray::Ray;
 use color::Color;
 use geometry::{Shape, FARAWAY};
-use materials::Material;
+use materials::{Material, Emitter};
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -36,16 +36,20 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8) -> Color {
 
         if param != FARAWAY {
             let scatter_loc: Vec3 = ray.position_at(param);
-            if let Material::Emitter{albedo} = hit_obj.material {
-                    let cosine: f64 = ray.dir.dotprod(&hit_obj.shape.normal_at(scatter_loc));
-                    return albedo * cosine.abs() };
+            if let Material::Emitter(emitter) = &hit_obj.material {
+                match emitter {
+                    Emitter::Blackbody{temperature: _ } => {
+                        let cosine: f64 = ray.dir.dotprod(&hit_obj.shape.normal_at(scatter_loc));
+                        return emitter.spectrum() * cosine.abs() }
+                }
+            }
             let scatter_ray: Ray = hit_obj.material.scatter(ray, &hit_obj.shape, scatter_loc);
             let obj_relative_loc: Vec3;
             match &hit_obj.shape {
                 Shape::Sphere(sphere) => obj_relative_loc = (scatter_loc - sphere.centre).normalize(),
                 Shape::Disc(disc) => obj_relative_loc = scatter_loc - disc.centre,
             }
-            return hit_obj.material.albedo(&obj_relative_loc) * raytrace(&scatter_ray, scene, scatter_depth - 1)
+            return hit_obj.material.spectrum(&obj_relative_loc) * raytrace(&scatter_ray, scene, scatter_depth - 1)
         }
     
 

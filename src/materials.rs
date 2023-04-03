@@ -10,6 +10,21 @@ use std::f64::consts::PI;
 
 use image::Rgba;
 
+#[derive(Debug, Serialize, Deserialize)]
+pub enum Emitter {
+    Blackbody {temperature: f64},
+}
+
+impl Emitter {
+    pub fn spectrum(&self) -> Color {
+        match self {
+            Emitter::Blackbody {temperature} => {
+                Color::new([*temperature;12])
+            }
+        }
+    }
+}
+
 #[serde_with::serde_as]
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Material {
@@ -22,7 +37,7 @@ pub enum Material {
         orient_up: Vec3,
         orient_around: Vec3,
     },
-    Emitter {albedo: Color},
+    Emitter(Emitter),
 }
 
 fn load_image(path_to_file: &str) -> image::DynamicImage {
@@ -37,7 +52,7 @@ serde_with::serde_conv!(
 );
 
 impl Material {
-    pub fn albedo(&self, location: &Vec3) -> Color {
+    pub fn spectrum(&self, location: &Vec3) -> Color {
         match self {
             Material::Diffuse{albedo: color} => *color,
             Material::Metal{albedo: color, fuzz: _} => *color,
@@ -49,7 +64,7 @@ impl Material {
                 let texture_color: Rgba<u8> = get_texture_rgba(&img, longitude, latitude);
                 rgba_to_color(texture_color)
             },
-            Material::Emitter{albedo: color} => *color,
+            Material::Emitter(emitter) => emitter.spectrum(),
         }
     }
     pub fn scatter(&self, inc_ray: &Ray, shape: &Shape, scatter_loc: Vec3) -> Ray {

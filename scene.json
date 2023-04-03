@@ -9,9 +9,9 @@
         {"shape" : {"Sphere" : {"centre": [0.0,-100.5,-1.0], "radius": 100.0}},
         "material": {"Metal": {"albedo": {"bin": [0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8]}, "fuzz": 0.1}}},
         {"shape" : {"Sphere" : {"centre": [0.7,-0.25,0.7], "radius": 0.25}}, 
-        "material": {"Emitter": {"albedo": {"bin" : [1.0,1.0,1.0,1.0, 0.8,0.8,0.8,0.8, 1.0,1.0,1.0,1.0]}}}},
+        "material": {"Emitter": {"Blackbody" : {"temperature": 0.9}}}},
         {"shape" : {"Disc" : {"centre" : [0.7, -0.25, 0.7], "normal" : [0.0, 1.0, 0.0], "radius" : 0.6}},
-        "material" : {"Emitter": {"albedo": {"bin": [1.0,1.0,1.0,1.0, 0.8,0.8,0.8,0.8, 1.0,1.0,1.0,1.0]}}}},
+        "material" : {"Emitter": {"Blackbody" : {"temperature": 0.8}}}},
         {"shape" : {"Sphere" : {"centre": [-0.5,0.0,0.7], "radius": 0.5}}, 
         "material" : {"Dielectric": {"refractive_index": 1.5}}},
 
