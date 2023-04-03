@@ -11,7 +11,7 @@ use std::io::Write;
 
 use vector::Vec3;
 use ray::Ray;
-use color::Color;
+use color::{Color, NUMBER_OF_BINS};
 use geometry::{Shape, FARAWAY};
 use materials::{Material, Emitter};
 use serde::{Serialize, Deserialize};
@@ -58,7 +58,7 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8) -> Color {
     let t = 0.5 * (ray.dir.1 + 1.0);
 
     // (1.0 - t) * Color::new([1.0,1.0,1.0]) + t* Color::new([0.5, 0.7, 1.0])
-    (1.0 - t) * Color::new([1.0;12]) + t * Color::new([0.5,0.5,0.5,0.5, 0.7,0.7,0.7,0.7, 1.0,1.0,1.0,1.0])
+    (1.0 - t) * Color::new([1.0;NUMBER_OF_BINS]) + t * Color::new([0.5,0.5,0.5,0.5, 0.7,0.7,0.7,0.7, 1.0,1.0,1.0,1.0])
 
 }
 
@@ -105,4 +105,13 @@ pub fn rgba_to_color(rgba: image::Rgba<u8>) -> Color {
        color.bin[i + 8] += (rgba[2] as f64) / 255.0;
     };
     color
+}
+
+pub fn logspace<const N: usize>(start: f64, stop: f64) -> [f64;N] {
+    let multiplier: f64 = 10.0_f64.powf((stop/start).log10()/N as f64);
+    let mut array: [f64;N] = [0.0;N];
+    for i in 0..N {
+        array[i] = start * multiplier.powi(i as i32);
+    }
+    array
 }

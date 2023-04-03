@@ -1,12 +1,14 @@
 use serde::{Serialize, Deserialize};
 
-use crate::{rgba_to_color};
+use crate::{rgba_to_color, logspace};
 use crate::{vector::Vec3, geometry::Shape};
 use crate::color::{Color, NUMBER_OF_BINS};
 use crate::ray::Ray;
 use rand::{Rng, thread_rng};
 use image::{DynamicImage, GenericImageView};
 use std::f64::consts::PI;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 
 use image::Rgba;
 
@@ -19,7 +21,14 @@ impl Emitter {
     pub fn spectrum(&self) -> Color {
         match self {
             Emitter::Blackbody {temperature} => {
-                Color::new([*temperature;12])
+                // The flux is not using a normalization
+                let flux = |energy: f64| energy.powi(3)/((energy / temperature).exp() - 1.0);
+                let mut bin = [0.0;NUMBER_OF_BINS];
+                let energy_bins = logspace::<NUMBER_OF_BINS>(0.1,20.0);
+                for i in 0..NUMBER_OF_BINS {
+                    bin[i] = flux(energy_bins[i])
+                }
+                Color::new(bin)
             }
         }
     }
@@ -42,6 +51,16 @@ pub enum Material {
 
 fn load_image(path_to_file: &str) -> image::DynamicImage {
     image::open(path_to_file).expect("cannot open file")
+}
+
+fn load_data(path_to_file: &str) -> Vec<Vec<f64>> {
+    let f = BufReader::new(File::open(path_to_file).unwrap());
+
+    let temperatures: Vec<Vec<f64>> = f.lines()
+        .map(|line| line.unwrap().split(' ')
+            .map(|value| value.parse().unwrap()).collect())
+        .collect();
+    temperatures
 }
 
 serde_with::serde_conv!(
@@ -146,6 +165,19 @@ fn get_texture_rgba(image: &DynamicImage, longitude_rad: f64, latitude_rad: f64)
     image.get_pixel(pixel_column as u32 % dimensions.0, pixel_row as u32 % dimensions.1)
 }
 
+fn get_temperature(map: &[Vec<f64>], row: usize, column: usize) -> f64 {
+    let row_access = row % map.len();
+    let column_access = column % map[row_access].len();
+    map[row_access][column_access]
+}
+
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    #[test]
+    fn get_temperatures_test() {
+        let data = vec![vec![1.0,2.0,3.0,4.0], vec![10.0,20.0,30.0,40.0,50.0]];
+        assert_eq!(get_temperature(data.as_slice(), 2, 5), 2.0)
+    }
 }
