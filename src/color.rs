@@ -1,7 +1,7 @@
 use std::ops;
 use serde::{Serialize, Deserialize};
 
-const NUMBER_OF_BINS:usize = 3;
+pub const NUMBER_OF_BINS:usize = 12;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Color {
