@@ -32,7 +32,7 @@ fn main() {
     println!("Starting render...");
     println!("Computing with {} samples", &cam.horiz_res*&cam.vert_res*spp);
     let timer = Instant::now();
-    raytracer::render_into_file(&mut file, &cam, &scene, spp);
+    raytracer::render_into_file(file, &cam, &scene, spp);
     println!("Render finished in {}s", timer.elapsed().as_secs());
 }
 

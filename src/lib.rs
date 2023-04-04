@@ -7,13 +7,13 @@ pub mod camera;
 pub mod config;
 
 use std::fs::File;
-use std::io::Write;
+use std::io::{Write, BufWriter};
 
 use vector::Vec3;
 use ray::Ray;
 use color::{Color, NUMBER_OF_BINS};
 use geometry::{Shape, FARAWAY};
-use materials::{Material, Emitter};
+use materials::{Material};
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -62,7 +62,8 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8) -> Color {
 
 }
 
-pub fn render_into_file(file: &mut File, cam: &camera::Camera, scene: &Vec<Hittable>, spp: u32) {
+pub fn render_into_file(file: File, cam: &camera::Camera, scene: &Vec<Hittable>, spp: u32) {
+    let mut stream = BufWriter::new(file);
     for j in 0..cam.vert_res {
         for i in 0..cam.horiz_res {
             let mut pixel_color: Color = (0..spp).map(|_| cam.get_focus_loc())
@@ -76,16 +77,17 @@ pub fn render_into_file(file: &mut File, cam: &camera::Camera, scene: &Vec<Hitta
             pixel_color = (1.0/(spp as f64)) * pixel_color; // no Div defined for Color
             let color = color_to_ppm(pixel_color);
             
-            writeln!(file, "{} {} {}", color.0, color.1, color.2)
-                .expect("Unable to write colors.");
+            writeln!(stream, "{} {} {}", color[0], color[1], color[2])
+                 .expect("Unable to write colors.");
         };
         eprint!("\rScanlines remaining: {}", cam.vert_res - j);
     };
+    stream.flush().expect("Cannot flush buffer.");
     eprintln!("");
 }
 
 
-pub fn color_to_ppm(col: Color) -> (u8, u8, u8) {
+pub fn color_to_ppm(col: Color) -> [u8;3] {
     let mut red: f64 = 0.0;
     let mut green: f64 = 0.0;
     let mut blue: f64 = 0.0;
@@ -94,7 +96,7 @@ pub fn color_to_ppm(col: Color) -> (u8, u8, u8) {
        green += col.bin[i+4]*0.25;
        blue += col.bin[i+8]*0.25;
     }
-    ((255.0 * red.sqrt()) as u8, (255.0*green.sqrt()) as u8, (255.0 * blue.sqrt()) as u8)
+    [(255.0 * red.sqrt()).clamp(0.0,255.0) as u8, (255.0*green.sqrt()).clamp(0.0,255.0) as u8, (255.0 * blue.sqrt()).clamp(0.0,255.0) as u8]
 }
 
 pub fn rgba_to_color(rgba: image::Rgba<u8>) -> Color {
