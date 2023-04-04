@@ -33,8 +33,8 @@ impl Camera {
 
     }
 
-    pub fn get_focus_loc(&self) -> Vec3 {
-        let rng_scalars = random_in_disc();
+    pub fn get_focus_loc(&self, rng: &mut impl Rng) -> Vec3 {
+        let rng_scalars = random_in_disc(rng);
 
         let nudged_lookfrom: Vec3 = self.lookfrom
                             + self.aperture * rng_scalars[0]*self.horiz_arm.normalize() 
@@ -63,12 +63,12 @@ impl Camera {
 
 }
 
-fn random_in_disc() -> [f64;2] {
-    let rng_scalars: [f64; 2] = thread_rng().gen();
+fn random_in_disc(rng: &mut impl Rng) -> [f64;2] {
+    let rng_scalars: [f64; 2] = rng.gen();
 
     let radius2: f64 = rng_scalars[0]*rng_scalars[0] + rng_scalars[1]*rng_scalars[1]; // rejection condition
     if radius2 > 1.0 {
-        return random_in_disc();
+        return random_in_disc(rng);
     };
     return rng_scalars;
 }
@@ -79,7 +79,8 @@ mod tests {
 
     #[test]
     fn random_in_disc_test() {
-        let point = random_in_disc();
+        let mut rng = thread_rng();
+        let point = random_in_disc(&mut rng);
         assert!(point[0]*point[0] + point[1]*point[1] <= 1.0, "picked point out of disc")
     }
 }

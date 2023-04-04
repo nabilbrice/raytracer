@@ -15,6 +15,7 @@ use color::{Color, NUMBER_OF_BINS};
 use geometry::{Shape, FARAWAY};
 use materials::{Material};
 use serde::{Serialize, Deserialize};
+use rand::{Rng, thread_rng};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Hittable {
@@ -23,7 +24,7 @@ pub struct Hittable {
 }
 
 
-pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8) -> Color {
+pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8, rng: &mut impl Rng) -> Color {
     if scatter_depth == 0 {
         return Color::new([0.0;color::NUMBER_OF_BINS]);
     }
@@ -43,13 +44,13 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8) -> Color {
                         return emitter.spectrum(&scatter_loc) * cosine.abs() },
                 }
             }
-            let scatter_ray: Ray = hit_obj.material.scatter(ray, &hit_obj.shape, scatter_loc);
+            let scatter_ray: Ray = hit_obj.material.scatter(ray, &hit_obj.shape, scatter_loc, rng);
             let obj_relative_loc: Vec3;
             match &hit_obj.shape {
                 Shape::Sphere(sphere) => obj_relative_loc = (scatter_loc - sphere.centre).normalize(),
                 Shape::Disc(disc) => obj_relative_loc = scatter_loc - disc.centre,
             }
-            return hit_obj.material.spectrum(&obj_relative_loc) * raytrace(&scatter_ray, scene, scatter_depth - 1)
+            return hit_obj.material.spectrum(&obj_relative_loc) * raytrace(&scatter_ray, scene, scatter_depth - 1, rng)
         }
     
 
@@ -64,14 +65,16 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8) -> Color {
 
 pub fn render_into_file(file: File, cam: &camera::Camera, scene: &Vec<Hittable>, spp: u32) {
     let mut stream = BufWriter::new(file);
+    let mut cam_rng = thread_rng();
+    let mut ray_rng = thread_rng();
     for j in 0..cam.vert_res {
         for i in 0..cam.horiz_res {
-            let mut pixel_color: Color = (0..spp).map(|_| cam.get_focus_loc())
+            let mut pixel_color: Color = (0..spp).map(|_| cam.get_focus_loc(&mut cam_rng))
                 .map(|focus_loc| {
                     Ray::new(focus_loc, cam.get_sample_loc(i,j) - focus_loc)
                 })
                 .fold(Color::new([0.0;color::NUMBER_OF_BINS]), |acc, r| {
-                    acc + raytrace(&r, &scene, 10)
+                    acc + raytrace(&r, &scene, 10, &mut ray_rng)
                 });
             
             pixel_color = (1.0/(spp as f64)) * pixel_color; // no Div defined for Color

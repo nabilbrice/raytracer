@@ -110,16 +110,16 @@ impl Material {
             Material::Emitter(emitter) => emitter.spectrum(location),
         }
     }
-    pub fn scatter(&self, inc_ray: &Ray, shape: &Shape, scatter_loc: Vec3) -> Ray {
+    pub fn scatter(&self, inc_ray: &Ray, shape: &Shape, scatter_loc: Vec3, rng: &mut impl Rng) -> Ray {
         match *self {
             Material::Diffuse{albedo: _} => {
-                let scatter_dir = shape.normal_at(scatter_loc) + random_vec3();
+                let scatter_dir = shape.normal_at(scatter_loc) + random_vec3(rng);
                 return Ray::new(scatter_loc, scatter_dir)
             },
             Material::Metal{albedo: _, fuzz: fuzziness} => {
                 let scatter_normal = shape.normal_at(scatter_loc);
                 let scatter_dir: Vec3 = inc_ray.dir - 2.0 * scatter_normal.dotprod(&inc_ray.dir) * scatter_normal;
-                let fuzzified_dir = fuzzify(fuzziness, scatter_dir, scatter_normal);
+                let fuzzified_dir = fuzzify(fuzziness, scatter_dir, scatter_normal, rng);
                 return Ray::new(scatter_loc, fuzzified_dir)
             },
             Material::Dielectric{refractive_index: r_idx} => {
@@ -146,7 +146,7 @@ impl Material {
                 };
             },
             Material::TextureMap { .. } => {
-                let scatter_dir = shape.normal_at(scatter_loc) + random_vec3();
+                let scatter_dir = shape.normal_at(scatter_loc) + random_vec3(rng);
                 return Ray::new(scatter_loc, scatter_dir)
             },
             _ => {
@@ -164,18 +164,18 @@ fn schlick(cosine: f64, r_idx: f64) -> bool {
     drawn_prob < reflectance
 }
 
-fn fuzzify(fuzziness: f64, scatter_dir: Vec3, scatter_normal: Vec3) -> Vec3 {
-    let fuzzy_dir = scatter_dir + (fuzziness * random_vec3());
+fn fuzzify(fuzziness: f64, scatter_dir: Vec3, scatter_normal: Vec3, rng: &mut impl Rng) -> Vec3 {
+    let fuzzy_dir = scatter_dir + (fuzziness * random_vec3(rng));
     if fuzzy_dir.dotprod(&scatter_normal) > 0.0 {
         fuzzy_dir
-    } else { fuzzify(fuzziness, scatter_dir, scatter_normal) }
+    } else { fuzzify(fuzziness, scatter_dir, scatter_normal, rng) }
 }
 
-fn random_vec3() -> Vec3 {
-    let v: (f64, f64, f64) = thread_rng().gen();
+fn random_vec3(rng: &mut impl Rng) -> Vec3 {
+    let v: (f64, f64, f64) = rng.gen();
     let rand_vec3 = 2.0 * Vec3(v.0 - 0.5, v.1 - 0.5, v.2 - 0.5);
     if rand_vec3.norm() > 1.0 {
-        return random_vec3();
+        return random_vec3(rng);
     };
     return rand_vec3.normalize();
 }
