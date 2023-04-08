@@ -49,6 +49,7 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8, rng: &mut i
             match &hit_obj.shape {
                 Shape::Sphere(sphere) => obj_relative_loc = (scatter_loc - sphere.centre).normalize(),
                 Shape::Disc(disc) => obj_relative_loc = scatter_loc - disc.centre,
+                Shape::Cylinder(cylinder) => {obj_relative_loc = (scatter_loc - cylinder.centre).normalize()},
             }
             return hit_obj.material.spectrum(&obj_relative_loc) * raytrace(&scatter_ray, scene, scatter_depth - 1, rng)
         }
@@ -83,7 +84,7 @@ pub fn render_into_file(file: File, cam: &camera::Camera, scene: &Vec<Hittable>,
             writeln!(stream, "{} {} {}", color[0], color[1], color[2])
                  .expect("Unable to write colors.");
         };
-        eprint!("\rScanlines remaining: {}", cam.vert_res - j);
+        eprint!("\rScanlines: {} out of {}",j , cam.vert_res);
     };
     stream.flush().expect("Cannot flush buffer.");
     eprintln!("");
