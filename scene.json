@@ -14,8 +14,8 @@
                                 "orient_around" : [1.0, 0.0, 0.5]}}}},
         {"shape" : {"Disc" : {"centre" : [0.7, -0.25, 0.7], "normal" : [0.0, 1.0, 0.0], "radius" : 0.6}},
         "material" : {"Emitter": {"Blackbody" : {"temperature": 2.0}}}},
-        {"shape" : {"Cylinder" : {"centre": [-0.5,3.0,0.7], "axis": [0.0,1.0,0.0], "radius": 0.25, "height":1.0}}, 
-        "material" : {"Dielectric" : {"refractive_index": 1.5}}},
+        {"shape" : {"Cylinder" : {"centre": [-0.5,1.0,0.7], "axis": [0.5,0.1,-1.0], "radius": 0.25, "height":0.5}}, 
+        "material" : {"Emitter" : {"Blackbody" : {"temperature": 1.5}}}},
 
         {"shape" : {"Sphere" : {"centre": [0.0,0.2,3.0], "radius": 0.75}},
         "material": {"TextureMap": {"map": "earthmap.jpeg",

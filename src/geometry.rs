@@ -43,13 +43,22 @@ pub struct Disc {
     pub radius: f64,
 }
 
+#[serde_with::serde_as]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Cylinder {
     pub centre: Vec3,
+    #[serde_as(as = "axis_normalized")]
     pub axis: Vec3,
     pub radius: f64,
     pub height: f64,
 }
+
+serde_with::serde_conv!(
+    axis_normalized,
+    Vec3,
+    | _ | " ",
+    |axis: Vec3| -> Result<_, std::convert::Infallible> {Ok(axis.normalize())}
+);
 
 impl Sphere {
     pub fn new(centre: Vec3, radius: f64) -> Self {
@@ -98,6 +107,7 @@ impl Disc {
     }
 }
 
+
 impl Cylinder {
     pub fn new(centre: Vec3, axis: Vec3, radius: f64, height: f64) -> Self {
         Self {centre, axis: axis.normalize(), radius, height}
@@ -110,7 +120,8 @@ impl Cylinder {
         
         let a: f64 = 1.0 - axis_rayd_cos*axis_rayd_cos;
         let b: f64 = 2.0*(translated_ray.orig.dotprod(&translated_ray.dir) - (axis_rayo_cos*axis_rayd_cos));
-        let c: f64 = translated_ray.orig.dotprod(&translated_ray.orig) - (axis_rayo_cos*axis_rayo_cos) - self.radius*self.radius;
+        let c: f64 = {translated_ray.orig.dotprod(&translated_ray.orig) - (axis_rayo_cos*axis_rayo_cos) 
+            - self.radius*self.radius};
 
         let discrim = b*b - 4.0*a*c;
         if discrim < 0.0 {
@@ -119,11 +130,13 @@ impl Cylinder {
         let sq = discrim.sqrt(); // there are two roots from here
 
         let t_smaller = -0.5 * (b + sq)/a;
-        if t_smaller > 0.0 {
+        let surface_height_smaller = translated_ray.position_at(t_smaller).dotprod(&self.axis).powi(2);
+        if t_smaller > 0.0 && surface_height_smaller < self.height*self.height {
             return t_smaller;
         };
         let t_larger = t_smaller + sq/a;
-        if t_larger > 1.0e-6 { t_larger } else {FARAWAY} // 1.0e-6 to avoid self-intersection
+        let surface_height = translated_ray.position_at(t_larger).dotprod(&self.axis).powi(2);
+        if t_larger < 1.0e-6 || surface_height > self.height*self.height { FARAWAY } else { t_larger } // 1.0e-6 to avoid self-intersection
     }
 
     pub fn normal_at(&self, surface_pos: Vec3) -> Vec3 {
