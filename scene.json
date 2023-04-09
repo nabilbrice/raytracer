@@ -14,7 +14,7 @@
                                 "orient_around" : [1.0, 0.0, 0.5]}}}},
         {"shape" : {"Disc" : {"centre" : [0.7, -0.25, 0.7], "normal" : [0.0, 1.0, 0.0], "radius" : 0.6}},
         "material" : {"Emitter": {"Blackbody" : {"temperature": 2.0}}}},
-        {"shape" : {"Cylinder" : {"centre": [-0.5,1.0,0.7], "axis": [0.5,0.1,-1.0], "radius": 0.25, "height":0.5}}, 
+        {"shape" : {"TruncCone" : {"centre": [-0.5,1.0,0.7], "axis": [0.0,1.0,8.0], "opening_angle": 12.0, "centre_radius": 0.25, "upper_radius":0.5}}, 
         "material" : {"Emitter" : {"Blackbody" : {"temperature": 1.5}}}},
 
         {"shape" : {"Sphere" : {"centre": [0.0,0.2,3.0], "radius": 0.75}},

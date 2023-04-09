@@ -50,6 +50,7 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8, rng: &mut i
                 Shape::Sphere(sphere) => obj_relative_loc = (scatter_loc - sphere.centre).normalize(),
                 Shape::Disc(disc) => obj_relative_loc = scatter_loc - disc.centre,
                 Shape::Cylinder(cylinder) => {obj_relative_loc = (scatter_loc - cylinder.centre).normalize()},
+                Shape::TruncCone(cone) => {obj_relative_loc = (scatter_loc - cone.centre).normalize()},
             }
             return hit_obj.material.spectrum(&obj_relative_loc) * raytrace(&scatter_ray, scene, scatter_depth - 1, rng)
         }
