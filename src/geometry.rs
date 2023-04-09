@@ -167,7 +167,7 @@ impl TruncCone {
 
     pub fn intersect(&self, ray: &Ray) -> f64 {
         let opening_rad = self.opening_angle / 180.0 * PI;
-        let bottom_pos = self.centre_radius / opening_rad.tan() * self.axis - self.centre;
+        let bottom_pos = self.centre_radius.abs() / opening_rad.tan() * self.axis - self.centre;
         let translated_ray: Ray = Ray::new(ray.orig + bottom_pos, ray.dir);
         let axis_rayd_cos = self.axis.dotprod(&translated_ray.dir);
         let axis_rayo_cos = self.axis.dotprod(&translated_ray.orig);
@@ -185,7 +185,7 @@ impl TruncCone {
 
         let t_smaller = -0.5 * (b + sq)/a;
         let surface_height = translated_ray.position_at(t_smaller).dotprod(&self.axis);
-        let lower_height = self.centre_radius / opening_rad.cos();
+        let lower_height = self.centre_radius.abs() / opening_rad.cos();
         if t_smaller > 0.0 && check_interval(surface_height, lower_height, self.height) {
             return t_smaller;
         };
@@ -197,7 +197,7 @@ impl TruncCone {
     pub fn normal_at(&self, surface_pos: Vec3) -> Vec3 {
         let opening_rad = self.opening_angle / 180.0 * PI;
         let axis_pos: Vec3 = self.centre + surface_pos.norm() / opening_rad.cos() * self.axis;
-        (axis_pos - surface_pos).normalize()
+        self.centre_radius.signum()*(surface_pos - axis_pos).normalize()
     }
     
 }
