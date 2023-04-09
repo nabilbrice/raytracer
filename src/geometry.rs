@@ -65,7 +65,7 @@ pub struct TruncCone {
     pub axis: Vec3,
     pub opening_angle: f64, // in radians
     pub centre_radius: f64,
-    pub upper_radius: f64,
+    pub height: f64,
 }
 
 serde_with::serde_conv!(
@@ -161,8 +161,8 @@ impl Cylinder {
 }
 
 impl TruncCone {
-    pub fn new(centre: Vec3, axis: Vec3, opening_angle: f64, centre_radius: f64, upper_radius: f64) -> Self {
-        Self {centre, axis: axis.normalize(), opening_angle, centre_radius, upper_radius}
+    pub fn new(centre: Vec3, axis: Vec3, opening_angle: f64, centre_radius: f64, height: f64) -> Self {
+        Self {centre, axis: axis.normalize(), opening_angle, centre_radius, height}
     }
 
     pub fn intersect(&self, ray: &Ray) -> f64 {
@@ -184,15 +184,14 @@ impl TruncCone {
         let sq = discrim.sqrt(); // there are two roots from here
 
         let t_smaller = -0.5 * (b + sq)/a;
-        let mut surface_position = translated_ray.position_at(t_smaller);
-        let mut surface_radius = surface_position.dotprod(&surface_position) - surface_position.dotprod(&self.axis).powi(2);
-        if t_smaller > 0.0 && check_interval(surface_radius, self.centre_radius.powi(2), self.upper_radius.powi(2)) {
+        let surface_height = translated_ray.position_at(t_smaller).dotprod(&self.axis);
+        let lower_height = self.centre_radius / opening_rad.cos();
+        if t_smaller > 0.0 && check_interval(surface_height, lower_height, self.height) {
             return t_smaller;
         };
         let t_larger = t_smaller + sq/a;
-        surface_position = translated_ray.position_at(t_larger);
-        surface_radius = surface_position.dotprod(&surface_position) - surface_position.dotprod(&self.axis).powi(2);
-        if t_larger < 1.0e-8 || !check_interval(surface_radius, self.centre_radius.powi(2), self.upper_radius.powi(2)) { FARAWAY } else { t_larger } // 1.0e-6 to avoid self-intersection
+        let surface_height = translated_ray.position_at(t_larger).dotprod(&self.axis);
+        if t_larger < 1.0e-8 || !check_interval(surface_height, lower_height, self.height) { FARAWAY } else { t_larger } // 1.0e-6 to avoid self-intersection
     }
     
     pub fn normal_at(&self, surface_pos: Vec3) -> Vec3 {
