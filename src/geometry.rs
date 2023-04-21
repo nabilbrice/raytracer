@@ -184,20 +184,20 @@ impl TruncCone {
         let sq = discrim.sqrt(); // there are two roots from here
 
         let t_smaller = -0.5 * (b + sq)/a;
-        let surface_height = translated_ray.position_at(t_smaller).dotprod(&self.axis);
-        let lower_height = self.centre_radius.abs() / opening_rad.cos();
-        if t_smaller > 0.0 && check_interval(surface_height, lower_height, self.height) {
+        let mut surface_height = translated_ray.position_at(t_smaller).dotprod(&self.axis);
+        let lower_height = self.centre_radius.abs() / opening_rad.tan();
+        if t_smaller > 0.0 && check_interval(surface_height, lower_height, self.height + lower_height) {
             return t_smaller;
         };
         let t_larger = t_smaller + sq/a;
-        let surface_height = translated_ray.position_at(t_larger).dotprod(&self.axis);
-        if t_larger < 1.0e-8 || !check_interval(surface_height, lower_height, self.height) { FARAWAY } else { t_larger } // 1.0e-6 to avoid self-intersection
+        surface_height = translated_ray.position_at(t_larger).dotprod(&self.axis);
+        if t_larger < 1.0e-8 || !check_interval(surface_height, lower_height, self.height + lower_height) { FARAWAY } else { t_larger } // 1.0e-6 to avoid self-intersection
     }
     
     pub fn normal_at(&self, surface_pos: Vec3) -> Vec3 {
         let opening_rad = self.opening_angle / 180.0 * PI;
         let axis_pos: Vec3 = self.centre + surface_pos.norm() / opening_rad.cos() * self.axis;
-        self.centre_radius.signum()*(surface_pos - axis_pos).normalize()
+        self.centre_radius.signum()*(surface_pos - axis_pos).normalize() // with + for normals facing outwards
     }
     
 }

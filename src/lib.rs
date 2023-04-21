@@ -58,10 +58,12 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8, rng: &mut i
 
     // Current calculation for sky color when no intersection is made
 
-    let t = 0.5 * (ray.dir.1 + 1.0);
+    Color::new([0.0;NUMBER_OF_BINS])
+
+    // let t = 0.5 * (ray.dir.1 + 1.0);
 
     // (1.0 - t) * Color::new([1.0,1.0,1.0]) + t* Color::new([0.5, 0.7, 1.0])
-    (1.0 - t) * Color::new([1.0;NUMBER_OF_BINS]) + t * Color::new([0.5,0.5,0.5,0.5, 0.7,0.7,0.7,0.7, 1.0,1.0,1.0,1.0])
+    // (1.0 - t) * Color::new([1.0;NUMBER_OF_BINS]) + t * Color::new([0.5,0.5,0.5,0.5, 0.7,0.7,0.7,0.7, 1.0,1.0,1.0,1.0])
 
 }
 
