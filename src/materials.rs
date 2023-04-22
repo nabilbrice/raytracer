@@ -22,6 +22,13 @@ pub enum Emitter {
         orient_up: Vec3,
         orient_around: Vec3,
     },
+    DiscTemperatureMap {
+        #[serde_as(as = "DiscTemperatureMapFilePath")]
+        map: Vec<Vec<f64>>,
+        centre: Vec3,
+        inner_radius: f64,
+        outer_radius: f64,
+    },
 }
 
 fn blackbody(temperature: f64) -> Color {
@@ -45,7 +52,11 @@ impl Emitter {
                 let longitude: f64 = orient_axes.0.dotprod(location).atan2(orient_axes.1.dotprod(location)) + PI;
 
                 let temperature = get_temperature(map, latitude, longitude)*10.0;
-                blackbody(temperature)
+                blackbody(temperature)},
+            Emitter::DiscTemperatureMap { map, centre, inner_radius, outer_radius} => {
+                let radial: f64 = ((*location - *centre).norm() - inner_radius)/(outer_radius - inner_radius)*2.0*PI; // PI to counter the get_temperature function
+                let temperature = get_temperature(map, 0.0, radial);
+                blackbody(temperature) 
             }
         }
     }
@@ -91,6 +102,13 @@ serde_with::serde_conv!(
     TemperatureMapFilePath,
     Vec<Vec<f64>>,
     |_map: &[Vec<f64>]| "tempmap.dat",
+    |path_to_file: &str| -> Result<_, std::convert::Infallible> {Ok(load_data(path_to_file))}
+);
+
+serde_with::serde_conv!(
+    DiscTemperatureMapFilePath,
+    Vec<Vec<f64>>,
+    |_map: &[Vec<f64>]| "disctempmap.dat",
     |path_to_file: &str| -> Result<_, std::convert::Infallible> {Ok(load_data(path_to_file))}
 );
 
