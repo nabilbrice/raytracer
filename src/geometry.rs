@@ -114,7 +114,7 @@ impl Disc {
         let h: f64 = (self.centre - ray.orig).dotprod(&self.normal)/self.normal.dotprod(&ray.dir);
         let point_in_disc: Vec3 = ray.position_at(h) - self.centre;
         if point_in_disc.dotprod(&point_in_disc) > self.radius * self.radius {return FARAWAY};
-        return h
+        h
     }
 
     pub fn normal_at(&self, _surface_pos: Vec3) -> Vec3 {

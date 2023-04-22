@@ -40,7 +40,7 @@ impl Camera {
                             + self.aperture * rng_scalars[0]*self.horiz_arm.normalize() 
                             + self.aperture * rng_scalars[1]*self.vert_arm.normalize(); 
 
-        return nudged_lookfrom;
+        nudged_lookfrom
     }
 
     pub fn get_sample_loc(&self, i: u32, j:u32) -> Vec3 {
@@ -70,7 +70,7 @@ fn random_in_disc(rng: &mut impl Rng) -> [f64;2] {
     if radius2 > 1.0 {
         return random_in_disc(rng);
     };
-    return rng_scalars;
+    rng_scalars
 }
 
 #[cfg(test)]

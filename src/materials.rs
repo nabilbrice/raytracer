@@ -40,9 +40,9 @@ impl Emitter {
         match self {
             Emitter::Blackbody {temperature} => { blackbody(*temperature) },
             Emitter::TemperatureMap{map, orient_up, orient_around} => {
-                let latitude: f64 = orient_up.normalize().dotprod(&location).acos();
+                let latitude: f64 = orient_up.normalize().dotprod(location).acos();
                 let orient_axes: (Vec3, Vec3) = (orient_around.normalize(), orient_up.normalize().cross(&orient_around.normalize()));
-                let longitude: f64 = orient_axes.0.dotprod(&location).atan2(orient_axes.1.dotprod(&location)) + PI;
+                let longitude: f64 = orient_axes.0.dotprod(location).atan2(orient_axes.1.dotprod(location)) + PI;
 
                 let temperature = get_temperature(map, latitude, longitude)*10.0;
                 blackbody(temperature)
@@ -101,10 +101,10 @@ impl Material {
             Material::Metal{albedo: color, fuzz: _} => *color,
             Material::Dielectric { refractive_index: _ } => Color::new([1.0;NUMBER_OF_BINS]),
             Material::TextureMap {map: img, orient_up, orient_around} => {
-                let latitude: f64 = orient_up.normalize().dotprod(&location).acos();
+                let latitude: f64 = orient_up.normalize().dotprod(location).acos();
                 let orient_axes: (Vec3, Vec3) = (orient_around.normalize(), orient_up.normalize().cross(&orient_around.normalize()));
-                let longitude: f64 = orient_axes.0.dotprod(&location).atan2(orient_axes.1.dotprod(&location)) + PI;
-                let texture_color: Rgba<u8> = get_texture_rgba(&img, longitude, latitude);
+                let longitude: f64 = orient_axes.0.dotprod(location).atan2(orient_axes.1.dotprod(location)) + PI;
+                let texture_color: Rgba<u8> = get_texture_rgba(img, longitude, latitude);
                 rgba_to_color(texture_color)
             },
             Material::Emitter(emitter) => emitter.spectrum(location),
@@ -114,13 +114,13 @@ impl Material {
         match *self {
             Material::Diffuse{albedo: _} => {
                 let scatter_dir = shape.normal_at(scatter_loc) + random_vec3(rng);
-                return Ray::new(scatter_loc, scatter_dir)
+                Ray::new(scatter_loc, scatter_dir)
             },
             Material::Metal{albedo: _, fuzz: fuzziness} => {
                 let scatter_normal = shape.normal_at(scatter_loc);
                 let scatter_dir: Vec3 = inc_ray.dir - 2.0 * scatter_normal.dotprod(&inc_ray.dir) * scatter_normal;
                 let fuzzified_dir = fuzzify(fuzziness, scatter_dir, scatter_normal, rng);
-                return Ray::new(scatter_loc, fuzzified_dir)
+                Ray::new(scatter_loc, fuzzified_dir)
             },
             Material::Dielectric{refractive_index: r_idx} => {
                 let scatter_normal = shape.normal_at(scatter_loc);
@@ -136,18 +136,16 @@ impl Material {
                     // total internal reflection
                     let scatter_dir: Vec3 = inc_dir_perp - inc_cos * scatter_normal;
                     return Ray::new(scatter_loc, scatter_dir);
-                }
-                else {
-                    // refraction
-                    // refracted ray goes in the same direction as inc ray so sign of cos is the same
-                    let scatter_cos: f64 = sign_inc * (1.0 - scatter_sin2).sqrt();
-                    let scatter_dir = scatter_dir_perp + scatter_cos * scatter_normal;
-                    return Ray::new(scatter_loc, scatter_dir);
                 };
+                // refraction
+                // refracted ray goes in the same direction as inc ray so sign of cos is the same
+                let scatter_cos: f64 = sign_inc * (1.0 - scatter_sin2).sqrt();
+                let scatter_dir = scatter_dir_perp + scatter_cos * scatter_normal;
+                Ray::new(scatter_loc, scatter_dir)
             },
             Material::TextureMap { .. } => {
                 let scatter_dir = shape.normal_at(scatter_loc) + random_vec3(rng);
-                return Ray::new(scatter_loc, scatter_dir)
+                Ray::new(scatter_loc, scatter_dir)
             },
             _ => {
                 panic!("Attempted to access scatter for Material without scattering implemented")
@@ -177,7 +175,7 @@ fn random_vec3(rng: &mut impl Rng) -> Vec3 {
     if rand_vec3.norm() > 1.0 {
         return random_vec3(rng);
     };
-    return rand_vec3.normalize();
+    rand_vec3.normalize()
 }
 
 fn get_texture_rgba(image: &DynamicImage, longitude_rad: f64, latitude_rad: f64) -> Rgba<u8> {

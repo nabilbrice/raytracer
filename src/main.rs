@@ -31,14 +31,14 @@ fn main() {
         .write(true)
         .open("./spec.dat")
         .expect("Unable to open spec file to write");
-    write!(spectrum_file, "{} {}\n", cam.horiz_res, cam.vert_res)
+    writeln!(spectrum_file, "{} {}", cam.horiz_res, cam.vert_res)
         .expect("Unable to write pixel format to spec file");
 
     let cli_args = Cli::parse();
     let spp: u32 = cli_args.samples_per_pixel; // samples per pixel, default set at 10
     // Render
     println!("Starting render...");
-    println!("Computing with {} samples", &cam.horiz_res*&cam.vert_res*spp);
+    println!("Computing with {} samples", cam.horiz_res*cam.vert_res*spp);
     let timer = Instant::now();
     raytracer::render_into_file(vis_file, spectrum_file, &cam, &scene, spp);
     println!("Render finished in {}s", timer.elapsed().as_secs());
