@@ -44,7 +44,8 @@ pub struct Sphere {
 pub struct Disc {
     pub centre: Vec3,
     pub normal: Vec3,
-    pub radius: f64,
+    pub inner_radius: f64,
+    pub outer_radius: f64,
 }
 
 #[serde_with::serde_as]
@@ -105,15 +106,17 @@ impl Sphere {
 }
 
 impl Disc {
-    pub fn new(centre: Vec3, normal: Vec3, radius: f64) -> Self {
-        Self {centre, normal: normal.normalize(), radius}
+    pub fn new(centre: Vec3, normal: Vec3, inner_radius: f64, outer_radius: f64) -> Self {
+        Self {centre, normal: normal.normalize(), inner_radius, outer_radius}
     }
 
     pub fn intersect(&self, ray: &Ray) -> f64 {
         if self.normal.dotprod(&ray.dir) == 0.0 {return FARAWAY};
         let h: f64 = (self.centre - ray.orig).dotprod(&self.normal)/self.normal.dotprod(&ray.dir);
         let point_in_disc: Vec3 = ray.position_at(h) - self.centre;
-        if point_in_disc.dotprod(&point_in_disc) > self.radius * self.radius {return FARAWAY};
+        if !check_interval(point_in_disc.dotprod(&point_in_disc), self.inner_radius.powi(2), self.outer_radius.powi(2)) {
+            return FARAWAY
+        };
         h
     }
 
@@ -218,7 +221,7 @@ mod tests {
 
     #[test]
     fn disc_normal_test() {
-        let disc = Disc::new(Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 1.0), 1.0);
+        let disc = Disc::new(Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 1.0), 0.0, 1.0);
         assert_eq!(disc.normal_at(Vec3(0.0, 0.5, 0.0)), Vec3(0.0, 0.0, 1.0));
     }
 
@@ -239,7 +242,7 @@ mod tests {
 
     #[test]
     fn disc_intersection_test() {
-        let disc = Disc::new(Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 1.0), 2.0);
+        let disc = Disc::new(Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 1.0), 0.0, 2.0);
         let ray = Ray::new(Vec3(1.0,0.0,3.0), Vec3(0.0, 0.0, -1.0));
         assert_eq!(ray.position_at(disc.intersect(&ray)), Vec3(1.0, 0.0, 0.0));
     }
