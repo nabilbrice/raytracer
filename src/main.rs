@@ -26,12 +26,12 @@ fn main() {
     write!(vis_file, "{}", header)
         .expect("Unable to write header to ppm");
 
-    let mut spec_file = OpenOptions::new()
+    let mut spectrum_file = OpenOptions::new()
         .create(true)
         .write(true)
         .open("./spec.dat")
         .expect("Unable to open spec file to write");
-    write!(spec_file, "{} {}\n", cam.horiz_res, cam.vert_res)
+    write!(spectrum_file, "{} {}\n", cam.horiz_res, cam.vert_res)
         .expect("Unable to write pixel format to spec file");
 
     let cli_args = Cli::parse();
@@ -40,7 +40,7 @@ fn main() {
     println!("Starting render...");
     println!("Computing with {} samples", &cam.horiz_res*&cam.vert_res*spp);
     let timer = Instant::now();
-    raytracer::render_into_file(vis_file, spec_file, &cam, &scene, spp);
+    raytracer::render_into_file(vis_file, spectrum_file, &cam, &scene, spp);
     println!("Render finished in {}s", timer.elapsed().as_secs());
 }
 

@@ -86,7 +86,7 @@ pub fn render_into_file(vis_file: File, tot_file: File, cam: &camera::Camera, sc
         
             pixel_color = (1.0/(spp as f64)) * pixel_color; // no Div defined for Color
 
-            writeln!(tot_stream, "{:?}", &pixel_color.bin)
+            writeln!(tot_stream, "{}", &pixel_color)
                 .expect("Unable to write total information");
 
             let color = color_to_ppm(pixel_color);

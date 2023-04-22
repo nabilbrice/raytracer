@@ -1,4 +1,5 @@
 use std::ops;
+use std::fmt;
 use serde::{Serialize, Deserialize};
 
 pub const NUMBER_OF_BINS:usize = 12;
@@ -6,6 +7,15 @@ pub const NUMBER_OF_BINS:usize = 12;
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Color {
     pub bin: [f64; NUMBER_OF_BINS],
+}
+
+impl fmt::Display for Color {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for value in self.bin.iter() {
+            write!(f, "{} ", value)?;
+        }
+    Ok(())
+    }
 }
 
 impl Color {
