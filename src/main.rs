@@ -16,15 +16,23 @@ fn main() {
     let scene = de_config.hittables;
     let cam = de_config.camera.setup();
 
-    let mut file = OpenOptions::new()
+    let mut vis_file = OpenOptions::new()
         .create(true)
         .write(true)
         .open("./image.ppm")
         .expect("Unable to open file to write");
 
     let header = format!("P3\n{} {}\n255\n",&cam.horiz_res,&cam.vert_res);
-    write!(file, "{}", header)
+    write!(vis_file, "{}", header)
         .expect("Unable to write header to ppm");
+
+    let mut spec_file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open("./spec.dat")
+        .expect("Unable to open spec file to write");
+    write!(spec_file, "{} {}\n", cam.horiz_res, cam.vert_res)
+        .expect("Unable to write pixel format to spec file");
 
     let cli_args = Cli::parse();
     let spp: u32 = cli_args.samples_per_pixel; // samples per pixel, default set at 10
@@ -32,7 +40,7 @@ fn main() {
     println!("Starting render...");
     println!("Computing with {} samples", &cam.horiz_res*&cam.vert_res*spp);
     let timer = Instant::now();
-    raytracer::render_into_file(file, &cam, &scene, spp);
+    raytracer::render_into_file(vis_file, spec_file, &cam, &scene, spp);
     println!("Render finished in {}s", timer.elapsed().as_secs());
 }
 

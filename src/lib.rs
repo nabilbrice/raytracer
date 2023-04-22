@@ -8,6 +8,7 @@ pub mod config;
 
 use std::fs::File;
 use std::io::{Write, BufWriter};
+use rayon::prelude::*;
 
 use vector::Vec3;
 use ray::Ray;
@@ -67,29 +68,36 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8, rng: &mut i
 
 }
 
-pub fn render_into_file(file: File, cam: &camera::Camera, scene: &Vec<Hittable>, spp: u32) {
-    let mut stream = BufWriter::new(file);
+pub fn render_into_file(vis_file: File, tot_file: File, cam: &camera::Camera, scene: &Vec<Hittable>, spp: u32) {
+    let mut vis_stream = BufWriter::new(vis_file);
+    let mut tot_stream = BufWriter::new(tot_file);
     let mut cam_rng = thread_rng();
     let mut ray_rng = thread_rng();
     for j in 0..cam.vert_res {
         for i in 0..cam.horiz_res {
-            let mut pixel_color: Color = (0..spp).map(|_| cam.get_focus_loc(&mut cam_rng))
-                .map(|focus_loc| {
+            let mut pixel_color: Color = (0..spp).into_iter()
+                .map(|_| {
+                    let focus_loc = cam.get_focus_loc(&mut cam_rng);
                     Ray::new(focus_loc, cam.get_sample_loc(i,j) - focus_loc)
                 })
                 .fold(Color::new([0.0;color::NUMBER_OF_BINS]), |acc, r| {
                     acc + raytrace(&r, &scene, 10, &mut ray_rng)
                 });
-            
+        
             pixel_color = (1.0/(spp as f64)) * pixel_color; // no Div defined for Color
+
+            writeln!(tot_stream, "{:?}", &pixel_color.bin)
+                .expect("Unable to write total information");
+
             let color = color_to_ppm(pixel_color);
             
-            writeln!(stream, "{} {} {}", color[0], color[1], color[2])
+            writeln!(vis_stream, "{} {} {}", color[0], color[1], color[2])
                  .expect("Unable to write colors.");
         };
         eprint!("\rScanlines: {} out of {}",j , cam.vert_res);
     };
-    stream.flush().expect("Cannot flush buffer.");
+    tot_stream.flush().expect("Cannot flush total buffer");
+    vis_stream.flush().expect("Cannot flush visualise buffer.");
     eprintln!("");
 }
 
