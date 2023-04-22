@@ -16,7 +16,7 @@ use color::{Color, NUMBER_OF_BINS};
 use geometry::{Shape, FARAWAY};
 use materials::{Material};
 use serde::{Serialize, Deserialize};
-use rand::{Rng, thread_rng};
+use rand::Rng;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Hittable {
@@ -71,18 +71,17 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8, rng: &mut i
 pub fn render_into_file(vis_file: File, tot_file: File, cam: &camera::Camera, scene: &Vec<Hittable>, spp: u32) {
     let mut vis_stream = BufWriter::new(vis_file);
     let mut tot_stream = BufWriter::new(tot_file);
-    let mut cam_rng = thread_rng();
-    let mut ray_rng = thread_rng();
     for j in 0..cam.vert_res {
         for i in 0..cam.horiz_res {
-            let mut pixel_color: Color = (0..spp).into_iter()
-                .map(|_| {
-                    let focus_loc = cam.get_focus_loc(&mut cam_rng);
-                    Ray::new(focus_loc, cam.get_sample_loc(i,j) - focus_loc)
-                })
-                .fold(Color::new([0.0;color::NUMBER_OF_BINS]), |acc, r| {
-                    acc + raytrace(&r, &scene, 10, &mut ray_rng)
-                });
+            let mut pixel_color: Color = (0..spp).into_par_iter()
+                .map_init(|| (rand::thread_rng(), rand::thread_rng()),
+                    |rng, _| {
+                        let focus_loc = cam.get_focus_loc(&mut rng.0);
+                        let ray = Ray::new(focus_loc, cam.get_sample_loc(i,j) - focus_loc);
+                        raytrace(&ray, &scene, 10, &mut rng.1)
+                    }
+                ).reduce(|| Color::new([0.0;NUMBER_OF_BINS]), 
+                    |a: Color,b: Color| (a + b));
         
             pixel_color = (1.0/(spp as f64)) * pixel_color; // no Div defined for Color
 

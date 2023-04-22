@@ -18,6 +18,14 @@ impl fmt::Display for Color {
     }
 }
 
+impl Iterator for Color {
+    type Item = f64;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.bin.iter().next().copied()
+    }
+}
+
 impl Color {
     pub fn new(bin: [f64; NUMBER_OF_BINS]) -> Color {
         Color{bin}
