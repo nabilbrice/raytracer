@@ -36,6 +36,7 @@ fn blackbody(temperature: f64) -> Color {
     let flux = |energy: f64| energy.powi(3)/((energy / temperature).exp() - 1.0);
     let mut bin = [0.0;NUMBER_OF_BINS];
     let energy_bins = logspace::<NUMBER_OF_BINS>(0.1,20.0);
+
     for i in 0..NUMBER_OF_BINS {
         bin[i] = flux(energy_bins[i])
     }
@@ -51,8 +52,9 @@ impl Emitter {
                 let orient_axes: (Vec3, Vec3) = (orient_around.normalize(), orient_up.normalize().cross(&orient_around.normalize()));
                 let longitude: f64 = orient_axes.0.dotprod(location).atan2(orient_axes.1.dotprod(location)) + PI;
 
-                let temperature = get_temperature(map, latitude, longitude)*10.0;
-                blackbody(temperature)},
+                let temperature = get_temperature(map, latitude, longitude);
+                blackbody(temperature)
+            },
             Emitter::DiscTemperatureMap { map, centre, inner_radius, outer_radius} => {
                 let radial: f64 = ((*location - *centre).norm() - inner_radius)/(outer_radius - inner_radius)*2.0*PI; // PI to counter the get_temperature function
                 let temperature = get_temperature(map, 0.0, radial);
