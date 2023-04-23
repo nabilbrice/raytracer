@@ -16,9 +16,9 @@
                                 "inner_radius" : 2.5,
                                 "outer_radius" : 5.0}}}},
         {"shape" : {"TruncCone" : {"centre": [0.0,0.0,0.0], "axis": [0.0,0.0,-1.0], "opening_angle": 30.0, "centre_radius": -5.250, "height":20.0}}, 
-        "material" : {"Diffuse" : {"albedo" : {"bin": [0.8,0.8,0.8,0.8,0.4,0.4,0.4,0.4,0.9,0.9,0.9,0.9]}}}},
+        "material" : {"Diffuse" : {"albedo" : {"bin": [0.8,0.8,0.8,0.8,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9]}}}},
         {"shape": {"TruncCone" : {"centre": [0.0,0.0,0.0], "axis": [0.0,0.0,-1.0], "opening_angle": 30.0, "centre_radius": 5.30, "height":20.0}},
-        "material" : {"Diffuse" : {"albedo" : {"bin": [0.8,0.8,0.8,0.8,0.4,0.4,0.4,0.4,0.9,0.9,0.9,0.9]}}}}
+        "material" : {"Diffuse" : {"albedo" : {"bin": [0.8,0.8,0.8,0.8,0.9,0.9,0.4,0.4,0.9,0.9,0.9,0.9]}}}}
     ]
 
 }

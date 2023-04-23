@@ -11,7 +11,7 @@ use std::io::{Write, BufWriter};
 
 use vector::Vec3;
 use ray::Ray;
-use color::Color;
+use color::{Color, NUMBER_OF_BINS};
 use geometry::{Shape, FARAWAY};
 use materials::{Material};
 use serde::{Serialize, Deserialize};
@@ -42,7 +42,7 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8, rng: &mut i
     if let Material::Emitter(emitter) = &hit_obj.material {
         let cosine: f64 = ray.dir.dotprod(&hit_obj.shape.normal_at(scatter_loc));
         return emitter.spectrum(&scatter_loc) * cosine.abs()
-    }
+    };
     let scatter_ray: Ray = hit_obj.material.scatter(ray, &hit_obj.shape, scatter_loc, rng);
     let obj_relative_loc: Vec3 = match &hit_obj.shape {
         Shape::Sphere(sphere) => (scatter_loc - sphere.centre).normalize(),
@@ -58,9 +58,10 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8, rng: &mut i
 
 }
 
-pub fn render_into_file(vis_file: File, tot_file: File, cam: &camera::Camera, scene: &Vec<Hittable>, spp: u32) {
+pub fn render_into_file(vis_file: File, spec_file: File, cam: &camera::Camera, scene: &Vec<Hittable>, spp: u32) {
     let mut vis_stream = BufWriter::new(vis_file);
-    let mut tot_stream = BufWriter::new(tot_file);
+    let mut spec_stream = BufWriter::new(spec_file);
+    let mut spectrum: Color = Color::new([0.0;NUMBER_OF_BINS]);
     let mut cam_rng = thread_rng();
     let mut ray_rng = thread_rng();
     for j in 0..cam.vert_res {
@@ -76,8 +77,9 @@ pub fn render_into_file(vis_file: File, tot_file: File, cam: &camera::Camera, sc
         
             pixel_color = (1.0/(spp as f64)) * pixel_color; // no Div defined for Color
 
-            writeln!(tot_stream, "{}", &pixel_color)
-                .expect("Unable to write total information");
+            spectrum = spectrum + pixel_color;
+            // writeln!(spec_stream, "{}", &pixel_color)
+            //     .expect("Unable to write total information");
 
             let color = color_to_ppm(pixel_color);
             
@@ -86,21 +88,16 @@ pub fn render_into_file(vis_file: File, tot_file: File, cam: &camera::Camera, sc
         };
         eprint!("\rScanlines: {} out of {}",j , cam.vert_res);
     };
-    tot_stream.flush().expect("Cannot flush total buffer");
+    writeln!(spec_stream, "{}", spectrum).expect("Unable to write spectrum to file");
     vis_stream.flush().expect("Cannot flush visualise buffer.");
     eprintln!();
 }
 
 
 pub fn color_to_ppm(col: Color) -> [u8;3] {
-    let mut red: f64 = 0.0;
-    let mut green: f64 = 0.0;
-    let mut blue: f64 = 0.0;
-    for i in 0..4 {
-       red += col.bin[i]*0.25;
-       green += col.bin[i+4]*0.25;
-       blue += col.bin[i+8]*0.25;
-    }
+    let red: f64 = col.bin[0];
+    let green: f64 = col.bin[NUMBER_OF_BINS/3];
+    let blue: f64 = col.bin[NUMBER_OF_BINS/3*2];
     [(255.0 * red.sqrt()).clamp(0.0,255.0) as u8, (255.0*green.sqrt()).clamp(0.0,255.0) as u8, (255.0 * blue.sqrt()).clamp(0.0,255.0) as u8]
 }
 
