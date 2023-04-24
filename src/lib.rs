@@ -95,7 +95,7 @@ pub fn render_into_file(vis_file: File, spec_file: File, cam: &camera::Camera, s
 
 
 pub fn color_to_ppm(col: Color) -> [u8;3] {
-    let red: f64 = col.bin[0];
+    let red: f64 = col.bin[0]*20.0;
     let green: f64 = col.bin[NUMBER_OF_BINS/3];
     let blue: f64 = col.bin[NUMBER_OF_BINS/3*2];
     [(255.0 * red.sqrt()).clamp(0.0,255.0) as u8, (255.0*green.sqrt()).clamp(0.0,255.0) as u8, (255.0 * blue.sqrt()).clamp(0.0,255.0) as u8]
