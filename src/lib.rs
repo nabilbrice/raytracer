@@ -33,38 +33,40 @@ fn cmp_intersection(a: Option<f64>, b: Option<f64>) -> std::cmp::Ordering {
 
 
 pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8) -> Color {
-    if scatter_depth == 0 {
-        return Color::new(0.0,0.0,0.0);
-    }
-
-    let (hit_obj, param) = scene.iter()
-                        .map(|hittable| {(hittable, hittable.shape.intersect(ray))})
-                        .min_by(|x,y| {cmp_intersection(x.1, y.1)})
-                        .unwrap();
-
-    if param.is_some() {
-        let scatter_loc: Vec3 = ray.position_at(param.unwrap());
-        if let Material::Emitter{albedo} = hit_obj.material {
-                let cosine: f64 = ray.dir.dotprod(&hit_obj.shape.normal_at(scatter_loc));
-                return albedo * cosine.abs()
-        };
-        let scatter_ray: Ray = hit_obj.material.scatter(ray, &hit_obj.shape, scatter_loc);
-        let obj_relative_loc: Vec3;
-        match &hit_obj.shape {
-            Shape::Sphere(sphere) => obj_relative_loc = (scatter_loc - sphere.centre).normalize(),
-            Shape::Disc(disc) => obj_relative_loc = scatter_loc - disc.centre,
-        }
-        return hit_obj.material.albedo(&obj_relative_loc) * raytrace(&scatter_ray, scene, scatter_depth - 1)
-    }
+    let mut color = Color::new(1.0,1.0,1.0);
     
+    let mut ray = ray.clone();
+    let mut scatter_ray: Ray;
+    for _ in 1..=scatter_depth {
+        let (hit_obj, param) = scene.iter()
+                            .map(|hittable| {(hittable, hittable.shape.intersect(ray))})
+                            .min_by(|x,y| {cmp_intersection(x.1, y.1)})
+                            .unwrap();
 
-    // Current calculation for sky color when no intersection is made
+        if param.is_some() {
+            let scatter_loc: Vec3 = ray.position_at(param.unwrap());
+            if let Material::Emitter{albedo} = hit_obj.material {
+                    let cosine: f64 = ray.dir.dotprod(&hit_obj.shape.normal_at(scatter_loc));
+                    return albedo * cosine.abs()
+            };
+            scatter_ray = hit_obj.material.scatter(ray, &hit_obj.shape, scatter_loc);
+            let obj_relative_loc: Vec3;
+            match &hit_obj.shape {
+                Shape::Sphere(sphere) => obj_relative_loc = (scatter_loc - sphere.centre).normalize(),
+                Shape::Disc(disc) => obj_relative_loc = scatter_loc - disc.centre,
+            }
+            color = color * hit_obj.material.albedo(&obj_relative_loc);
+            ray = &scatter_ray;
+        } else {
+            let t = 0.5 * (ray.dir.1 + 1.0);
+            let sky_color = (1.0 - t) * Color{r: 1.0, g: 1.0, b: 1.0} + t* Color{r: 0.5, g: 0.7, b: 1.0};
 
-    let t = 0.5 * (ray.dir.1 + 1.0);
+            return color * sky_color;
+        }
 
-    (1.0 - t) * Color{r: 1.0, g: 1.0, b: 1.0} + t* Color{r: 0.5, g: 0.7, b: 1.0}
-    // Color{r: 0.0, g: 0.0, b: 0.0}
+    }
 
+    color
 }
 
 pub fn render_into_file(file: &mut File, cam: &camera::Camera, scene: &Vec<Hittable>, spp: u32) {
