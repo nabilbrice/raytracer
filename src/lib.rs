@@ -12,7 +12,7 @@ use std::io::Write;
 use vector::Vec3;
 use ray::Ray;
 use color::Color;
-use geometry::{Shape, FARAWAY};
+use geometry::Shape;
 use materials::Material;
 use serde::{Serialize, Deserialize};
 
@@ -20,6 +20,15 @@ use serde::{Serialize, Deserialize};
 pub struct Hittable {
     shape: Shape,
     material: Material,
+}
+
+fn cmp_intersection(a: Option<f64>, b: Option<f64>) -> std::cmp::Ordering {
+    match (a,b) {
+        (Some(a), Some(b)) => a.partial_cmp(&b).unwrap(),
+        (Some(_), None) => std::cmp::Ordering::Less,
+        (None, Some(_)) => std::cmp::Ordering::Greater,
+        (None, None) => std::cmp::Ordering::Equal,
+    }
 }
 
 
@@ -30,12 +39,12 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8) -> Color {
 
     let (hit_obj, param) = scene.iter()
                         .map(|hittable| {(hittable, hittable.shape.intersect(ray))})
-                        .min_by(|x,y| {x.1.total_cmp(&y.1)})
+                        .min_by(|x,y| {cmp_intersection(x.1, y.1)})
                         .unwrap();
 
 
-        if param != FARAWAY {
-            let scatter_loc: Vec3 = ray.position_at(param);
+        if param.is_some() {
+            let scatter_loc: Vec3 = ray.position_at(param.unwrap());
             if let Material::Emitter{albedo} = hit_obj.material {
                     let cosine: f64 = ray.dir.dotprod(&hit_obj.shape.normal_at(scatter_loc));
                     return albedo * cosine.abs() };
