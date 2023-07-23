@@ -5,6 +5,7 @@ pub mod geometry;
 pub mod materials;
 pub mod camera;
 pub mod config;
+pub mod scenegen;
 
 use std::fs::File;
 use std::io::{Write, BufWriter};
