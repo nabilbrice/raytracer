@@ -7,7 +7,7 @@ pub mod camera;
 pub mod config;
 
 use std::fs::File;
-use std::io::Write;
+use std::io::{Write, BufWriter};
 
 use vector::Vec3;
 use ray::Ray;
@@ -42,20 +42,20 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8) -> Color {
                         .min_by(|x,y| {cmp_intersection(x.1, y.1)})
                         .unwrap();
 
-
-        if param.is_some() {
-            let scatter_loc: Vec3 = ray.position_at(param.unwrap());
-            if let Material::Emitter{albedo} = hit_obj.material {
-                    let cosine: f64 = ray.dir.dotprod(&hit_obj.shape.normal_at(scatter_loc));
-                    return albedo * cosine.abs() };
-            let scatter_ray: Ray = hit_obj.material.scatter(ray, &hit_obj.shape, scatter_loc);
-            let obj_relative_loc: Vec3;
-            match &hit_obj.shape {
-                Shape::Sphere(sphere) => obj_relative_loc = (scatter_loc - sphere.centre).normalize(),
-                Shape::Disc(disc) => obj_relative_loc = scatter_loc - disc.centre,
-            }
-            return hit_obj.material.albedo(&obj_relative_loc) * raytrace(&scatter_ray, scene, scatter_depth - 1)
+    if param.is_some() {
+        let scatter_loc: Vec3 = ray.position_at(param.unwrap());
+        if let Material::Emitter{albedo} = hit_obj.material {
+                let cosine: f64 = ray.dir.dotprod(&hit_obj.shape.normal_at(scatter_loc));
+                return albedo * cosine.abs()
+        };
+        let scatter_ray: Ray = hit_obj.material.scatter(ray, &hit_obj.shape, scatter_loc);
+        let obj_relative_loc: Vec3;
+        match &hit_obj.shape {
+            Shape::Sphere(sphere) => obj_relative_loc = (scatter_loc - sphere.centre).normalize(),
+            Shape::Disc(disc) => obj_relative_loc = scatter_loc - disc.centre,
         }
+        return hit_obj.material.albedo(&obj_relative_loc) * raytrace(&scatter_ray, scene, scatter_depth - 1)
+    }
     
 
     // Current calculation for sky color when no intersection is made
@@ -68,6 +68,7 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8) -> Color {
 }
 
 pub fn render_into_file(file: &mut File, cam: &camera::Camera, scene: &Vec<Hittable>, spp: u32) {
+    let mut vis_stream = BufWriter::new(file);
     for j in 0..cam.vert_res {
         for i in 0..cam.horiz_res {
             let mut pixel_color: Color = (0..spp).map(|_| cam.get_focus_loc())
@@ -81,10 +82,10 @@ pub fn render_into_file(file: &mut File, cam: &camera::Camera, scene: &Vec<Hitta
             pixel_color = (1.0/(spp as f64)) * pixel_color; // no Div defined for Color
             let color = color_to_ppm(pixel_color);
             
-            writeln!(file, "{} {} {}", color.0, color.1, color.2)
+            writeln!(vis_stream, "{} {} {}", color.0, color.1, color.2)
                 .expect("Unable to write colors.");
         };
-        eprint!("\rScanlines remaining: {}", cam.vert_res - j);
+        eprint!("\rScanline: {} out of {}", j, cam.vert_res);
     };
     eprintln!("");
 }
