@@ -6,6 +6,7 @@ pub mod materials;
 pub mod camera;
 pub mod config;
 pub mod scenegen;
+pub mod boundingvolume;
 
 use std::fs::File;
 use std::io::{Write, BufWriter};

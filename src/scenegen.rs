@@ -37,7 +37,6 @@ pub fn gen_scene() -> Vec<Hittable> {
     };
 
     scene
-    
 }
 
 pub fn default_camera() -> Camera {
@@ -47,7 +46,7 @@ pub fn default_camera() -> Camera {
 fn gen_hittable(rng: &mut ThreadRng, location: Vec3) -> Hittable {
     let small_sphere = Sphere::new(location, 0.2);
     let material: Material;
-        
+
     let probability: f64 = rng.gen();
 
     if probability < 0.8 {
