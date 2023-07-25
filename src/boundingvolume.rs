@@ -75,6 +75,7 @@ impl geometry::Sphere {
 mod tests {
     use super::*;
     use crate::vector::Vec3;
+    use crate::Hittable;
 
     #[test]
     fn test_bbox_intersection() {
@@ -119,5 +120,27 @@ mod tests {
         assert_eq!(bbox.1.maximum, 1.0);
         assert_eq!(bbox.2.minimum, -1.0);
         assert_eq!(bbox.2.maximum, 1.0);
+    }
+
+    #[test]
+    fn test_surround_for_list() {
+        use crate::geometry::Shape;
+        let scene: Vec<Hittable> = vec![Hittable{shape: Shape::Sphere(geometry::Sphere{centre: Vec3(0.0, 0.0, 0.0), radius: 1.0}), material: crate::materials::Material::Diffuse{albedo: crate::Color::new(0.0, 0.0, 0.0)}},
+                                        Hittable{shape: Shape::Sphere(geometry::Sphere{centre: Vec3(1.0, 1.0, 1.0), radius: 1.0}), material: crate::materials::Material::Diffuse{albedo: crate::Color::new(0.0, 0.0, 0.0)}},
+                                        Hittable{shape: Shape::Sphere(geometry::Sphere{centre: Vec3(-1.0, -1.0, -1.0), radius: 1.0}), material: crate::materials::Material::Diffuse{albedo: crate::Color::new(0.0, 0.0, 0.0)}}];
+        let bboxs: Vec<BoundingBox> = scene.iter().map(|hittable| 
+            match &hittable.shape {
+                Shape::Sphere(sphere) => sphere.surround(),
+                _ => panic!("Not a sphere"),
+            }).collect();
+        let bigbbox = bboxs.iter().fold(BoundingBox(Interval{minimum: 0.0, maximum: 0.0}, Interval{minimum: 0.0, maximum: 0.0}, Interval{minimum: 0.0, maximum: 0.0}), 
+        |acc, bbox| acc.compose(bbox));
+
+        assert_eq!(bigbbox.0.minimum, -2.0);
+        assert_eq!(bigbbox.0.maximum, 2.0);
+        assert_eq!(bigbbox.1.minimum, -2.0);
+        assert_eq!(bigbbox.1.maximum, 2.0);
+        assert_eq!(bigbbox.2.minimum, -2.0);
+        assert_eq!(bigbbox.2.maximum, 2.0);
     }
 }
