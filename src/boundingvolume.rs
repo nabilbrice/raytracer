@@ -94,6 +94,34 @@ fn split_by_longest_axis(bblist: &mut [BoundingBox]) -> (&mut [BoundingBox], &mu
     (leftboxs, rightboxs)
 }
 
+struct VolumeTreeNode {
+    bbox: BoundingBox,
+    left: Option<Box<VolumeTreeNode>>,
+    right: Option<Box<VolumeTreeNode>>,
+}
+
+impl VolumeTreeNode {
+    fn construct(bblist: Vec<BoundingBox>) -> VolumeTreeNode {
+        let mut bblist = bblist;
+        let bigbox = bblist.iter().fold( None,
+        |acc, bbox| compose(acc.as_ref(), Some(&bbox))).unwrap();
+        let (leftboxs, rightboxs) = split_by_longest_axis(&mut bblist);
+        let left: Option<Box<VolumeTreeNode>>;
+        let right: Option<Box<VolumeTreeNode>>;
+        if leftboxs.len() == 1 {
+            left = Some(Box::new(VolumeTreeNode{bbox: leftboxs[0].clone(), left: None, right: None}));
+        } else {
+            left = Some(Box::new(VolumeTreeNode::construct(leftboxs.to_vec())));
+        }
+        if rightboxs.len() == 1 {
+            right = Some(Box::new(VolumeTreeNode{bbox: rightboxs[0].clone(), left: None, right: None}));
+        } else {
+            right = Some(Box::new(VolumeTreeNode::construct(rightboxs.to_vec())));
+        }
+        VolumeTreeNode{bbox: bigbox, left, right}
+    }
+}
+
 impl geometry::Sphere {
     fn surround(&self) -> BoundingBox {
         let radius = self.radius;
@@ -198,5 +226,25 @@ mod tests {
 
         assert_eq!(rightleftboxs[0].0.minimum, -2.0);
         
+    }
+
+    #[test]
+    fn test_volume_tree_construction() {
+        use crate::geometry::Shape;
+        let scene: Vec<Hittable> = vec![Hittable{shape: Shape::Sphere(geometry::Sphere{centre: Vec3(0.0, 0.0, 0.0), radius: 1.0}), material: crate::materials::Material::Diffuse{albedo: crate::Color::new(0.0, 0.0, 0.0)}},
+                                        Hittable{shape: Shape::Sphere(geometry::Sphere{centre: Vec3(1.0, 3.0, 1.0), radius: 1.5}), material: crate::materials::Material::Diffuse{albedo: crate::Color::new(0.0, 0.0, 0.0)}},
+                                        Hittable{shape: Shape::Sphere(geometry::Sphere{centre: Vec3(-1.0, 3.0, -1.0), radius: 1.0}), material: crate::materials::Material::Diffuse{albedo: crate::Color::new(0.0, 0.0, 0.0)}}];
+        
+        let bboxs: Vec<BoundingBox> = scene.iter().map(|hittable|
+            match &hittable.shape {
+                Shape::Sphere(sphere) => sphere.surround(),
+                _ => unreachable!("Not a sphere"),
+            }).collect();
+
+        let tree = VolumeTreeNode::construct(bboxs);
+
+        // println!("{:?}", tree.right.unwrap().left.as_ref().unwrap().bbox);
+
+        assert!(tree.left.unwrap().left.is_none());
     }
 }
