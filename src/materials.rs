@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 
-use crate::{rgba_to_color, color};
+use crate::rgba_to_color;
 use crate::{vector::Vec3, geometry::Shape};
 use crate::color::Color;
 use crate::ray::Ray;
@@ -115,7 +115,7 @@ fn fuzzify(fuzziness: f64, scatter_dir: Vec3, scatter_normal: Vec3) -> Vec3 {
 
 fn random_vec3() -> Vec3 {
     let v: (f64, f64, f64) = thread_rng().gen();
-    let rand_vec3 = 2.0 * Vec3(v.0 - 0.5, v.1 - 0.5, v.2 - 0.5);
+    let rand_vec3 = 2.0 * Vec3([v.0 - 0.5, v.1 - 0.5, v.2 - 0.5]);
     if rand_vec3.norm() > 1.0 {
         return random_vec3();
     };

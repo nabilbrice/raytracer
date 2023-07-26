@@ -1,12 +1,17 @@
 use serde::{Serialize, Deserialize};
+use std::ops::Deref;
 
 use crate::vector::Vec3;
 use crate::ray::Ray;
+use crate::intervals;
+use crate::intervals::Interval;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Shape {
     Sphere(Sphere),
     Disc(Disc),
+    #[serde(skip_serializing, skip_deserializing)]
+    BoundVolume(BoundBox),
 }
 
 impl Shape {
@@ -14,6 +19,7 @@ impl Shape {
         match self {
             Shape::Sphere(sphere) => sphere.intersect(ray),
             Shape::Disc(disc) => disc.intersect(ray),
+            _ => todo!(),
         }
     }
 
@@ -21,6 +27,7 @@ impl Shape {
         match self {
             Shape::Sphere(sphere) => sphere.normal_at(surface_pos),
             Shape::Disc(disc) => disc.normal_at(surface_pos),
+            _ => todo!(),
         }
     }
 }
@@ -36,6 +43,41 @@ pub struct Disc {
     pub centre: Vec3,
     pub normal: Vec3,
     pub radius: f64,
+}
+
+#[derive(Debug)]
+pub struct BoundBox([Interval;3]);
+
+impl Deref for BoundBox {
+    type Target = [Interval;3];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+pub fn cover(bbox1: &BoundBox, bbox2: &BoundBox) -> BoundBox {
+    BoundBox(
+        [intervals::cover(&bbox1[0], &bbox2[0]),
+        intervals::cover(&bbox1[1], &bbox2[1]),
+        intervals::cover(&bbox1[2], &bbox2[2])])
+}
+
+impl BoundBox {
+    pub fn intersect(&self, ray: &Ray) -> Option<f64> {
+        let mut times = self.iter().zip(ray.orig.iter()).zip(ray.dir.iter())
+            .map(|((interval,orig),dir)| Interval::new((interval.start - orig)/dir, (interval.end - orig)/dir));
+
+        let intersection01 = intervals::intersection(&times.next().unwrap(), &times.next().unwrap());
+        if intersection01.is_none() {
+            return None
+        };
+        let intersection012 = intervals::intersection(&intersection01.unwrap(), &times.next().unwrap());
+        match intersection012 {
+            Some(interval) => Some(interval.start),
+            None => None,
+        }
+    }
 }
 
 impl Sphere {
@@ -91,35 +133,51 @@ mod tests {
 
     #[test]
     fn sphere_normal_test() {
-        let sph = Sphere::new(Vec3(0.0,0.0,0.0), 2.0);
-        assert_eq!(sph.normal_at(Vec3(2.0,0.0,0.0)), Vec3(1.0,0.0,0.0));
+        let sph = Sphere::new(Vec3([0.0,0.0,0.0]), 2.0);
+        assert_eq!(sph.normal_at(Vec3([2.0,0.0,0.0])), Vec3([1.0,0.0,0.0]));
     }
 
     #[test]
     fn disc_normal_test() {
-        let disc = Disc::new(Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 1.0), 1.0);
-        assert_eq!(disc.normal_at(Vec3(0.0, 0.5, 0.0)), Vec3(0.0, 0.0, 1.0));
+        let disc = Disc::new(Vec3([0.0, 0.0, 0.0]), Vec3([0.0, 0.0, 1.0]), 1.0);
+        assert_eq!(disc.normal_at(Vec3([0.0, 0.5, 0.0])), Vec3([0.0, 0.0, 1.0]));
     }
 
     #[test]
     fn sphere_intersect_test() {
-        let sph = Sphere::new(Vec3(0.0,0.0,0.0), 2.0);
-        let ray = Ray::new(Vec3(0.0,0.0,-3.0), Vec3(0.0,0.0,1.0));
+        let sph = Sphere::new(Vec3([0.0,0.0,0.0]), 2.0);
+        let ray = Ray::new(Vec3([0.0,0.0,-3.0]), Vec3([0.0,0.0,1.0]));
         assert_eq!(sph.intersect(&ray), Some(1.0));
     }
 
     #[test]
-
     fn sphere_non_intersection_test() {
-        let sph = Sphere::new(Vec3(0.0,0.0,0.0), 1.0);
-        let ray = Ray::new(Vec3(2.0,0.0,0.0), Vec3(1.0,0.0,0.0));
+        let sph = Sphere::new(Vec3([0.0,0.0,0.0]), 1.0);
+        let ray = Ray::new(Vec3([2.0,0.0,0.0]), Vec3([1.0,0.0,0.0]));
         assert_eq!(sph.intersect(&ray), Option::None);
     }
 
     #[test]
     fn disc_intersection_test() {
-        let disc = Disc::new(Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 1.0), 2.0);
-        let ray = Ray::new(Vec3(1.0,0.0,3.0), Vec3(0.0, 0.0, -1.0));
-        assert_eq!(ray.position_at(disc.intersect(&ray).unwrap()), Vec3(1.0, 0.0, 0.0));
+        let disc = Disc::new(Vec3([0.0, 0.0, 0.0]), Vec3([0.0, 0.0, 1.0]), 2.0);
+        let ray = Ray::new(Vec3([1.0,0.0,3.0]), Vec3([0.0, 0.0, -1.0]));
+        assert_eq!(ray.position_at(disc.intersect(&ray).unwrap()), Vec3([1.0, 0.0, 0.0]));
+    }
+
+    #[test]
+    fn test_bbox_cover() {
+        let bbox1 = BoundBox([Interval::new(0.0,1.0), Interval::new(0.0,1.0), Interval::new(0.0,1.0)]);
+        let bbox2 = BoundBox([Interval::new(-1.0,1.0), Interval::new(0.0,2.0), Interval::new(-1.0,0.0)]);
+        let bbox3 = BoundBox([Interval::new(-1.0,1.0), Interval::new(0.0,2.0), Interval::new(-1.0,1.0)]);
+
+        let new_bbox = cover(&bbox1, &bbox2);
+
+        assert_eq!(new_bbox[0].start, bbox3[0].start);
+        assert_eq!(new_bbox[0].end, bbox3[0].end);
+        assert_eq!(new_bbox[1].start, bbox3[1].start);
+        assert_eq!(new_bbox[1].end, bbox3[1].end);
+        assert_eq!(new_bbox[2].start, bbox3[2].start);
+        assert_eq!(new_bbox[2].end, bbox3[2].end);
+
     }
 }

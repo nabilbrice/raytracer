@@ -18,7 +18,7 @@ pub struct Camera {
 impl Camera {
     pub fn build(lookat: Vec3, lookfrom: Vec3, inv_focal_length: f64, aperture: f64,
         horiz_res: u32, vert_res: u32) -> Camera {
-            let lookup = Vec3(0.0, 1.0, 0.0); // fiducial value, normalize first
+            let lookup = Vec3([0.0, 1.0, 0.0]); // fiducial value, normalize first
             let pointing_direction: Vec3 = lookat - lookfrom;
             let focal_distance = pointing_direction.norm();
             // upside down because flipped through aperture

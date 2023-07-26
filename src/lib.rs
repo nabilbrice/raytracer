@@ -6,7 +6,8 @@ pub mod materials;
 pub mod camera;
 pub mod config;
 pub mod scenegen;
-pub mod boundingvolume;
+// pub mod boundingvolume;
+pub mod intervals;
 
 use std::fs::File;
 use std::io::{Write, BufWriter};
@@ -56,11 +57,12 @@ pub fn raytrace(ray: &Ray, scene: &Vec<Hittable>, scatter_depth: u8) -> Color {
             match &hit_obj.shape {
                 Shape::Sphere(sphere) => obj_relative_loc = (scatter_loc - sphere.centre).normalize(),
                 Shape::Disc(disc) => obj_relative_loc = scatter_loc - disc.centre,
+                _ => todo!(),
             }
             color = color * hit_obj.material.albedo(&obj_relative_loc);
             ray = &scatter_ray;
         } else {
-            let t = 0.5 * (ray.dir.1 + 1.0);
+            let t = 0.5 * (ray.dir[1] + 1.0);
             let sky_color = (1.0 - t) * Color{r: 1.0, g: 1.0, b: 1.0} + t* Color{r: 0.5, g: 0.7, b: 1.0};
 
             return color * sky_color;

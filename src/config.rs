@@ -29,7 +29,6 @@ impl SetupCamera {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::fs;
 
     #[test]
