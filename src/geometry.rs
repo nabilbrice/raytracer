@@ -19,7 +19,8 @@ impl Shape {
         match self {
             Shape::Sphere(sphere) => sphere.intersect(ray),
             Shape::Disc(disc) => disc.intersect(ray),
-            _ => todo!(),
+            Shape::BoundVolume(bbox) => bbox.intersect(ray),
+            _ => unreachable!(),
         }
     }
 
@@ -78,6 +79,7 @@ impl BoundBox {
             None => None,
         }
     }
+
 }
 
 impl Sphere {

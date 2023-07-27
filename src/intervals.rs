@@ -40,6 +40,13 @@ pub fn cover(in1: &Interval, in2: &Interval) -> Interval {
     Interval::new(start, end)
 }
 
+pub fn get_larger<'input>(in1: &'input Interval, in2: &'input Interval) -> &'input Interval {
+    if in1.size() < in2.size() {
+        return &in2
+    }
+    &in1
+}
+
 mod tests {
     use super::*;
 
@@ -69,5 +76,14 @@ mod tests {
 
         assert_eq!(cover(&in1, &in2).start, in1.start);
         assert_eq!(cover(&in1, &in2).end, in2.end);
+    }
+
+    #[test]
+    fn test_larger() {
+        let in1 = Interval::new(-1.0, 1.0);
+        let in2 = Interval::new(2.0, 3.0);
+
+        assert_eq!(get_larger(&in1, &in2).start, -1.0);
+        assert_eq!(get_larger(&in1, &in2).end, 1.0);
     }
 }
