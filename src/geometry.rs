@@ -80,6 +80,20 @@ impl BoundBox {
         }
     }
 
+    pub fn surround(shape: &Shape) -> BoundBox {
+        match shape {
+            Shape::Sphere(sphere) => {
+                let mut starts = sphere.centre.iter().map(|coord| coord - sphere.radius);
+                let mut ends = sphere.centre.iter().map(|coord| coord + sphere.radius);
+                return BoundBox([Interval::new(starts.next().unwrap(), ends.next().unwrap()),
+                                 Interval::new(starts.next().unwrap(), ends.next().unwrap()),
+                                 Interval::new(starts.next().unwrap(), ends.next().unwrap())]);
+
+            },
+            _ => unimplemented!(),
+        }
+    }
+
 }
 
 impl Sphere {
@@ -180,6 +194,19 @@ mod tests {
         assert_eq!(new_bbox[1].end, bbox3[1].end);
         assert_eq!(new_bbox[2].start, bbox3[2].start);
         assert_eq!(new_bbox[2].end, bbox3[2].end);
+    }
 
+    #[test]
+    fn test_surround_sphere() {
+        let sphere = Sphere::new(Vec3([1.0,2.0,3.0]),2.0);
+
+        let bbox = BoundBox::surround(&Shape::Sphere(sphere));
+
+        assert_eq!(bbox[0].start, -1.0);
+        assert_eq!(bbox[0].end, 3.0);
+        assert_eq!(bbox[1].start, 0.0);
+        assert_eq!(bbox[1].end, 4.0);
+        assert_eq!(bbox[2].start, 1.0);
+        assert_eq!(bbox[2].end, 5.0);
     }
 }
