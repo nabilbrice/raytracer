@@ -9,6 +9,8 @@ impl Interval {
         self.end - self.start
     }
 
+    // Can be a Result<Self, E>
+    // caused by end < start
     pub fn new(start: f64, end: f64) -> Self {
         Interval { start, end }
     }
@@ -18,7 +20,7 @@ pub fn intersection(in1: &Interval, in2: &Interval) -> Option<Interval> {
     let start = if in1.start < in2.start {
         in2.start
     } else {
-        in2.start
+        in1.start
     };
     let end = if in1.end < in2.end { in1.end } else { in2.end };
 
@@ -42,7 +44,7 @@ pub fn cover(in1: &Interval, in2: &Interval) -> Interval {
 
 pub fn get_larger<'input>(in1: &'input Interval, in2: &'input Interval) -> &'input Interval {
     if in1.size() < in2.size() {
-        return &in2
+        return &in2;
     }
     &in1
 }

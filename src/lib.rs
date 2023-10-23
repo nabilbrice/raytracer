@@ -1,13 +1,14 @@
+// pub mod boundingvolume;
+pub mod boundingvolume;
 pub mod camera;
 pub mod color;
 pub mod config;
 pub mod geometry;
+pub mod intervals;
 pub mod materials;
 pub mod ray;
 pub mod scenegen;
 pub mod vector;
-// pub mod boundingvolume;
-pub mod intervals;
 
 use std::fs::File;
 use std::io::{BufWriter, Write};
