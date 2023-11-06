@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Interval {
     pub start: f64,
     pub end: f64,
@@ -7,6 +7,10 @@ pub struct Interval {
 impl Interval {
     pub fn size(&self) -> f64 {
         self.end - self.start
+    }
+
+    pub fn midpoint(&self) -> f64 {
+        0.5 * (self.start + self.end)
     }
 
     // Can be a Result<Self, E>
