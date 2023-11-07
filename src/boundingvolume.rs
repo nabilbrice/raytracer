@@ -108,6 +108,40 @@ impl BoundingBoxes for [BoundingBox] {
     }
 }
 
+fn split_on_covering(boxes: &mut [BoundingBox]) -> (&mut [BoundingBox], &mut [BoundingBox]) {
+    let halfway: usize = boxes.len() / 2;
+    let covering = boxes.make_all_covering();
+    boxes.sort_on_index(covering.longest_axis());
+
+    let (left_half, right_half) = boxes.split_at_mut(halfway);
+    (left_half, right_half)
+}
+
+struct CoveringTree {
+    cover: BoundingBox,
+    left: Option<Box<CoveringTree>>,
+    right: Option<Box<CoveringTree>>,
+}
+
+fn make_coveringtree(boxes: &mut [BoundingBox]) -> Box<CoveringTree> {
+    let covering = boxes.make_all_covering();
+    let mut coveringtree = CoveringTree {
+        cover: covering,
+        left: None,
+        right: None,
+    };
+
+    let (left_half, right_half) = split_on_covering(boxes);
+    if left_half.len() > 1 {
+        coveringtree.left = Some(make_coveringtree(left_half));
+    };
+    if right_half.len() > 1 {
+        coveringtree.right = Some(make_coveringtree(right_half));
+    }
+
+    Box::new(coveringtree)
+}
+
 mod tests {
     use super::*;
     use crate::vector::Vec3;
@@ -267,12 +301,35 @@ mod tests {
         list.sort_on_index(total_cover.longest_axis());
         assert_eq!(list[0].midpoint(), bbox3_midpoint);
 
-        let halfway: usize = list.len() / 2;
-        let (mut left_half, mut right_half) = list.split_at_mut(halfway);
+        let (left_half, right_half) = split_on_covering(&mut list);
         assert_eq!(right_half[0].midpoint(), bbox2_midpoint);
         let right_cover = right_half.make_all_covering();
         assert_eq!(right_cover.longest_axis(), 1);
         right_half.sort_on_index(right_cover.longest_axis());
         assert_eq!(right_half[0].midpoint(), bbox1_midpoint);
+    }
+
+    #[test]
+    fn test_coveringtree() {
+        let bbox1 = BoundingBox([
+            Interval::new(0.0, 1.0),
+            Interval::new(0.0, 2.0),
+            Interval::new(-1.0, 2.0),
+        ]);
+        let bbox2 = BoundingBox([
+            Interval::new(-2.0, 0.0),
+            Interval::new(-3.0, 0.0),
+            Interval::new(-2.0, 0.0),
+        ]);
+        let bbox3 = BoundingBox([
+            Interval::new(-2.0, 1.0),
+            Interval::new(0.0, 1.0),
+            Interval::new(3.0, 4.0),
+        ]);
+
+        let mut list = [bbox1, bbox2, bbox3];
+        let treebase = make_coveringtree(&mut list);
+
+        assert!(treebase.right.is_some());
     }
 }
