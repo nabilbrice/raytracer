@@ -6,7 +6,7 @@ use crate::intervals::{cover, get_larger, intersection, Interval};
 use crate::ray::Ray;
 use crate::vector::Vec3;
 
-pub struct BoundingBox(pub [Interval; 3]);
+struct BoundingBox([Interval; 3]);
 
 impl Deref for BoundingBox {
     type Target = [Interval; 3];
@@ -72,7 +72,7 @@ impl BoundingBox {
     }
 }
 
-pub fn make_cover_of(bbox1: &BoundingBox, bbox2: &BoundingBox) -> BoundingBox {
+fn make_cover_of(bbox1: &BoundingBox, bbox2: &BoundingBox) -> BoundingBox {
     BoundingBox([
         cover(&bbox1[0], &bbox2[0]),
         cover(&bbox1[1], &bbox2[1]),
@@ -80,30 +80,29 @@ pub fn make_cover_of(bbox1: &BoundingBox, bbox2: &BoundingBox) -> BoundingBox {
     ])
 }
 
-pub struct BoundingBoxList<const N: usize>([BoundingBox; N]);
+trait BoundingBoxes {
+    fn sort_on_index(&mut self, idx: usize);
 
-impl<const N: usize> Deref for BoundingBoxList<N> {
-    type Target = [BoundingBox; N];
+    fn make_all_covering(&self) -> BoundingBox;
+}
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
+impl BoundingBoxes for &mut [BoundingBox] {
+    fn sort_on_index(&mut self, idx: usize) {
+        self.sort_unstable_by(|b1, b2| b1[idx].size().partial_cmp(&b2[idx].size()).unwrap());
+    }
+
+    fn make_all_covering(&self) -> BoundingBox {
+        self.iter()
+            .fold(BoundingBox::empty(), |acc, bbox| acc.compose_with(&bbox))
     }
 }
 
-impl<const N: usize> DerefMut for BoundingBoxList<N> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl<const N: usize> BoundingBoxList<N> {
-    pub fn sort_on_index(&mut self, idx: usize) {
-        self.sort_unstable_by(|b1, b2| {
-            b1[idx].midpoint().partial_cmp(&b2[idx].midpoint()).unwrap()
-        });
+impl BoundingBoxes for [BoundingBox] {
+    fn sort_on_index(&mut self, idx: usize) {
+        self.sort_unstable_by(|b1, b2| b1[idx].size().partial_cmp(&b2[idx].size()).unwrap());
     }
 
-    pub fn make_all_containing(&self) -> BoundingBox {
+    fn make_all_covering(&self) -> BoundingBox {
         self.iter()
             .fold(BoundingBox::empty(), |acc, bbox| acc.compose_with(&bbox))
     }
@@ -207,11 +206,11 @@ mod tests {
             Interval::new(-1.0, 3.0),
         ]); // has midpoint Vec3([1.5,0.0,1.0])
 
-        let mut list: BoundingBoxList<3> = BoundingBoxList([bbox1, bbox2, bbox3]);
+        let mut list = [bbox1, bbox2, bbox3];
         list.sort_on_index(0);
-        assert_eq!(list[1].midpoint(), Vec3([0.5, 1.0, 1.5]));
+        assert_eq!(list[0].midpoint(), Vec3([0.5, 1.0, 1.5]));
         list.sort_on_index(2);
-        assert_eq!(list[2].midpoint(), Vec3([0.5, 1.0, 1.5]));
+        assert_eq!(list[1].midpoint(), Vec3([0.5, 1.0, 1.5]));
     }
 
     #[test]
@@ -224,7 +223,7 @@ mod tests {
     }
 
     #[test]
-    fn test_all_containing() {
+    fn test_all_covering() {
         let bbox1 = BoundingBox([Interval::new(0.0, 1.0); 3]);
         let bbox2 = BoundingBox([Interval::new(-1.0, 1.0); 3]);
         let bbox3 = BoundingBox([
@@ -233,11 +232,47 @@ mod tests {
             Interval::new(-1.0, 1.0),
         ]);
 
-        let mut list: BoundingBoxList<3> = BoundingBoxList([bbox1, bbox2, bbox3]);
-        let total_cover = list.make_all_containing();
+        let mut list = [bbox1, bbox2, bbox3];
+        let total_cover = list.make_all_covering();
         assert_eq!(total_cover.longest_axis(), 0);
 
         list.sort_on_index(total_cover.longest_axis());
-        assert_eq!(list[1].midpoint(), Vec3([0.5; 3]));
+        assert_eq!(list[0].midpoint(), Vec3([0.5; 3]));
+    }
+
+    #[test]
+    fn test_splitting() {
+        let bbox1 = BoundingBox([
+            Interval::new(0.0, 1.0),
+            Interval::new(0.0, 2.0),
+            Interval::new(-1.0, 2.0),
+        ]);
+        let bbox2 = BoundingBox([
+            Interval::new(-2.0, 0.0),
+            Interval::new(-3.0, 0.0),
+            Interval::new(-2.0, 0.0),
+        ]);
+        let bbox3 = BoundingBox([
+            Interval::new(-2.0, 1.0),
+            Interval::new(0.0, 1.0),
+            Interval::new(3.0, 4.0),
+        ]);
+
+        let bbox1_midpoint = bbox1.midpoint();
+        let bbox2_midpoint = bbox2.midpoint();
+        let bbox3_midpoint = bbox3.midpoint();
+
+        let mut list = [bbox1, bbox2, bbox3];
+        let total_cover = list.make_all_covering(); // (-2.0,1.0), (-3.0,2.0), (-2.0,4.0)
+        list.sort_on_index(total_cover.longest_axis());
+        assert_eq!(list[0].midpoint(), bbox3_midpoint);
+
+        let halfway: usize = list.len() / 2;
+        let (mut left_half, mut right_half) = list.split_at_mut(halfway);
+        assert_eq!(right_half[0].midpoint(), bbox2_midpoint);
+        let right_cover = right_half.make_all_covering();
+        assert_eq!(right_cover.longest_axis(), 1);
+        right_half.sort_on_index(right_cover.longest_axis());
+        assert_eq!(right_half[0].midpoint(), bbox1_midpoint);
     }
 }
