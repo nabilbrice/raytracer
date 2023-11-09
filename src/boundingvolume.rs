@@ -5,53 +5,58 @@ use crate::geometry;
 use crate::intervals::{cover, get_larger, intersection, Interval};
 use crate::ray::Ray;
 use crate::vector::Vec3;
+use crate::Hittable;
 
-struct BoundingBox([Interval; 3]);
+struct BoundingBox {
+    dims: [Interval; 3],
+    boxed: Option<&'static Hittable>,
+}
 
 impl Deref for BoundingBox {
-    type Target = [Interval; 3];
+    type Target = Option<&'static Hittable>;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.boxed
     }
 }
 
 impl DerefMut for BoundingBox {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        &mut self.boxed
     }
 }
 
 impl BoundingBox {
     fn empty() -> BoundingBox {
-        BoundingBox([Interval::new(0.0, 0.0); 3])
+        BoundingBox {
+            dims: [Interval::new(0.0, 0.0); 3],
+            boxed: None,
+        }
+    }
+
+    fn with_dims(dims: [Interval; 3]) -> BoundingBox {
+        BoundingBox { dims, boxed: None }
     }
 
     fn check_intersection(&self, ray: &Ray) -> bool {
-        let times_axis0 = Interval {
-            start: (self[0].start - ray.orig[0]) / ray.dir[0],
-            end: (self[0].end - ray.orig[0]) / ray.dir[0],
-        };
-        let times_axis1 = Interval {
-            start: (self[1].start - ray.orig[1]) / ray.dir[1],
-            end: (self[1].end - ray.orig[1]) / ray.dir[1],
-        };
-        let times_axis2 = Interval {
-            start: (self[2].start - ray.orig[2]) / ray.dir[2],
-            end: (self[2].end - ray.orig[2]) / ray.dir[2],
-        };
+        let mut times = [Interval::new(0.0, 0.0); 3];
+        for i in 0..=2 {
+            let start = (self.dims[i].start - ray.orig[i]) / ray.dir[i];
+            let end = (self.dims[i].end - ray.orig[i]) / ray.dir[i];
+            times[i] = Interval::new(start, end);
+        }
 
-        let Some(xy) = intersection(&times_axis0, &times_axis1) else {
+        let Some(xy) = intersection(&times[0], &times[1]) else {
             return false;
         };
-        return intersection(&xy, &times_axis2).is_some();
+        return intersection(&xy, &times[2]).is_some();
     }
 
     // for use in the node split by longest axis
     fn longest_axis(&self) -> usize {
-        let x_size = self[0].size();
-        let y_size = self[1].size();
-        let z_size = self[2].size();
+        let x_size = self.dims[0].size();
+        let y_size = self.dims[1].size();
+        let z_size = self.dims[2].size();
 
         if x_size > y_size && x_size > z_size {
             return 0;
@@ -63,7 +68,11 @@ impl BoundingBox {
     }
 
     fn midpoint(&self) -> Vec3 {
-        Vec3([self[0].midpoint(), self[1].midpoint(), self[2].midpoint()])
+        Vec3([
+            self.dims[0].midpoint(),
+            self.dims[1].midpoint(),
+            self.dims[2].midpoint(),
+        ])
     }
 
     // this composition consumes the self and creates a new one
@@ -73,11 +82,14 @@ impl BoundingBox {
 }
 
 fn make_cover_of(bbox1: &BoundingBox, bbox2: &BoundingBox) -> BoundingBox {
-    BoundingBox([
-        cover(&bbox1[0], &bbox2[0]),
-        cover(&bbox1[1], &bbox2[1]),
-        cover(&bbox1[2], &bbox2[2]),
-    ])
+    BoundingBox {
+        dims: [
+            cover(&bbox1.dims[0], &bbox2.dims[0]),
+            cover(&bbox1.dims[1], &bbox2.dims[1]),
+            cover(&bbox1.dims[2], &bbox2.dims[2]),
+        ],
+        boxed: None,
+    }
 }
 
 trait BoundingBoxes {
@@ -88,7 +100,12 @@ trait BoundingBoxes {
 
 impl BoundingBoxes for &mut [BoundingBox] {
     fn sort_on_index(&mut self, idx: usize) {
-        self.sort_unstable_by(|b1, b2| b1[idx].size().partial_cmp(&b2[idx].size()).unwrap());
+        self.sort_unstable_by(|b1, b2| {
+            b1.dims[idx]
+                .size()
+                .partial_cmp(&b2.dims[idx].size())
+                .unwrap()
+        });
     }
 
     fn make_all_covering(&self) -> BoundingBox {
@@ -99,7 +116,12 @@ impl BoundingBoxes for &mut [BoundingBox] {
 
 impl BoundingBoxes for [BoundingBox] {
     fn sort_on_index(&mut self, idx: usize) {
-        self.sort_unstable_by(|b1, b2| b1[idx].size().partial_cmp(&b2[idx].size()).unwrap());
+        self.sort_unstable_by(|b1, b2| {
+            b1.dims[idx]
+                .size()
+                .partial_cmp(&b2.dims[idx].size())
+                .unwrap()
+        });
     }
 
     fn make_all_covering(&self) -> BoundingBox {
@@ -142,6 +164,32 @@ fn make_coveringtree(boxes: &mut [BoundingBox]) -> Box<CoveringTree> {
     Box::new(coveringtree)
 }
 
+trait Cover {
+    fn make_covering(&self) -> BoundingBox;
+}
+
+trait EachCover {
+    fn make_each_covering(&self) -> Box<[BoundingBox]>;
+}
+
+impl Cover for geometry::Sphere {
+    fn make_covering(&self) -> BoundingBox {
+        let midpoint = self.centre;
+        let mut cover = BoundingBox::empty();
+        for i in 0..2 {
+            cover.dims[i] =
+                Interval::new(self.centre[i] - self.radius, self.centre[i] + self.radius);
+        }
+        cover
+    }
+}
+
+impl EachCover for [geometry::Sphere] {
+    fn make_each_covering(&self) -> Box<[BoundingBox]> {
+        self.iter().map(|sphere| sphere.make_covering()).collect()
+    }
+}
+
 mod tests {
     use super::*;
     use crate::vector::Vec3;
@@ -149,20 +197,7 @@ mod tests {
 
     #[test]
     fn test_bbox_intersection() {
-        let bbox = BoundingBox([
-            Interval {
-                start: 0.0,
-                end: 1.0,
-            },
-            Interval {
-                start: 0.0,
-                end: 1.0,
-            },
-            Interval {
-                start: 0.0,
-                end: 1.0,
-            },
-        ]);
+        let bbox = BoundingBox::with_dims([Interval::new(0.0, 1.0); 3]);
         let ray = Ray {
             orig: Vec3([1.5, 0.5, 0.5]),
             dir: Vec3([1.0, 0.0, 0.0]),
@@ -178,24 +213,24 @@ mod tests {
 
     #[test]
     fn test_make_containers() {
-        let bbox1 = BoundingBox([Interval::new(0.0, 1.0); 3]);
-        let bbox2 = BoundingBox([Interval::new(1.0, 2.0); 3]);
+        let bbox1 = BoundingBox::with_dims([Interval::new(0.0, 1.0); 3]);
+        let bbox2 = BoundingBox::with_dims([Interval::new(1.0, 2.0); 3]);
         let bbox3 = make_cover_of(&bbox1, &bbox2);
 
-        assert_eq!(bbox3[0].start, 0.0);
-        assert_eq!(bbox3[0].end, 2.0);
-        assert_eq!(bbox3[1].start, 0.0);
-        assert_eq!(bbox3[1].end, 2.0);
-        assert_eq!(bbox3[2].start, 0.0);
-        assert_eq!(bbox3[2].end, 2.0);
+        assert_eq!(bbox3.dims[0].start, 0.0);
+        assert_eq!(bbox3.dims[0].end, 2.0);
+        assert_eq!(bbox3.dims[1].start, 0.0);
+        assert_eq!(bbox3.dims[1].end, 2.0);
+        assert_eq!(bbox3.dims[2].start, 0.0);
+        assert_eq!(bbox3.dims[2].end, 2.0);
     }
 
     #[test]
     fn test_longest_axis() {
-        let bbox1 = BoundingBox([Interval::new(0.0, 1.0); 3]);
+        let bbox1 = BoundingBox::with_dims([Interval::new(0.0, 1.0); 3]);
         assert_eq!(bbox1.longest_axis(), 2);
 
-        let bbox2 = BoundingBox([
+        let bbox2 = BoundingBox::with_dims([
             Interval {
                 start: 0.0,
                 end: 1.0,
@@ -214,7 +249,7 @@ mod tests {
 
     #[test]
     fn test_midpoint() {
-        let bbox = BoundingBox([
+        let bbox = BoundingBox::with_dims([
             Interval::new(0.0, 1.0),
             Interval::new(0.0, 2.0),
             Interval::new(0.0, 3.0),
@@ -224,17 +259,17 @@ mod tests {
 
     #[test]
     fn test_sorting() {
-        let bbox1 = BoundingBox([
+        let bbox1 = BoundingBox::with_dims([
             Interval::new(0.0, 1.0),
             Interval::new(0.0, 2.0),
             Interval::new(0.0, 3.0),
         ]); // has midpoint Vec3([0.5,1.0,1.5])
-        let bbox2 = BoundingBox([
+        let bbox2 = BoundingBox::with_dims([
             Interval::new(-1.0, 1.0),
             Interval::new(-1.0, 1.0),
             Interval::new(-1.0, 1.0),
         ]); // has midpoint Vec3([0.0,0.0,0.0])
-        let bbox3 = BoundingBox([
+        let bbox3 = BoundingBox::with_dims([
             Interval::new(-2.0, 5.0),
             Interval::new(-2.0, 2.0),
             Interval::new(-1.0, 3.0),
@@ -250,7 +285,7 @@ mod tests {
     #[test]
     fn test_compose_with() {
         let bbox1 = BoundingBox::empty();
-        let bbox2 = BoundingBox([Interval::new(-1.0, 1.0); 3]);
+        let bbox2 = BoundingBox::with_dims([Interval::new(-1.0, 1.0); 3]);
 
         let cover = bbox1.compose_with(&bbox2);
         assert_eq!(cover.midpoint(), Vec3([0.0; 3]));
@@ -258,9 +293,9 @@ mod tests {
 
     #[test]
     fn test_all_covering() {
-        let bbox1 = BoundingBox([Interval::new(0.0, 1.0); 3]);
-        let bbox2 = BoundingBox([Interval::new(-1.0, 1.0); 3]);
-        let bbox3 = BoundingBox([
+        let bbox1 = BoundingBox::with_dims([Interval::new(0.0, 1.0); 3]);
+        let bbox2 = BoundingBox::with_dims([Interval::new(-1.0, 1.0); 3]);
+        let bbox3 = BoundingBox::with_dims([
             Interval::new(0.0, 2.0),
             Interval::new(0.0, 1.0),
             Interval::new(-1.0, 1.0),
@@ -276,17 +311,17 @@ mod tests {
 
     #[test]
     fn test_splitting() {
-        let bbox1 = BoundingBox([
+        let bbox1 = BoundingBox::with_dims([
             Interval::new(0.0, 1.0),
             Interval::new(0.0, 2.0),
             Interval::new(-1.0, 2.0),
         ]);
-        let bbox2 = BoundingBox([
+        let bbox2 = BoundingBox::with_dims([
             Interval::new(-2.0, 0.0),
             Interval::new(-3.0, 0.0),
             Interval::new(-2.0, 0.0),
         ]);
-        let bbox3 = BoundingBox([
+        let bbox3 = BoundingBox::with_dims([
             Interval::new(-2.0, 1.0),
             Interval::new(0.0, 1.0),
             Interval::new(3.0, 4.0),
@@ -311,25 +346,33 @@ mod tests {
 
     #[test]
     fn test_coveringtree() {
-        let bbox1 = BoundingBox([
+        let bbox1 = BoundingBox::with_dims([
             Interval::new(0.0, 1.0),
             Interval::new(0.0, 2.0),
             Interval::new(-1.0, 2.0),
         ]);
-        let bbox2 = BoundingBox([
+        let bbox2 = BoundingBox::with_dims([
             Interval::new(-2.0, 0.0),
             Interval::new(-3.0, 0.0),
             Interval::new(-2.0, 0.0),
         ]);
-        let bbox3 = BoundingBox([
+        let bbox3 = BoundingBox::with_dims([
             Interval::new(-2.0, 1.0),
             Interval::new(0.0, 1.0),
             Interval::new(3.0, 4.0),
         ]);
 
-        let mut list = [bbox1, bbox2, bbox3];
-        let treebase = make_coveringtree(&mut list);
+        let b3cover = make_cover_of(&bbox3, &BoundingBox::empty());
+        let b1b2cover = make_cover_of(&bbox1, &bbox2);
 
+        let mut list = [bbox1, bbox2, bbox3];
+
+        let treebase = make_coveringtree(&mut list);
         assert!(treebase.right.is_some());
+
+        assert_eq!(
+            treebase.right.unwrap().cover.midpoint(),
+            b1b2cover.midpoint()
+        );
     }
 }
