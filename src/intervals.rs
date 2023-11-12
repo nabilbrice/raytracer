@@ -19,10 +19,12 @@ impl Interval {
         0.5 * (self.start + self.end)
     }
 
-    // Can be a Result<Self, E>
-    // caused by end < start
     pub fn new(start: f64, end: f64) -> Self {
         Interval { start, end }
+    }
+
+    pub fn size_partial_cmp(&self, other: &Interval) -> Option<std::cmp::Ordering> {
+        self.size().partial_cmp(&other.size())
     }
 }
 

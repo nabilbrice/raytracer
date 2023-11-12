@@ -100,6 +100,10 @@ fn make_cover_of(bbox1: &BoundingBox, bbox2: &BoundingBox) -> BoundingBox {
 }
 
 trait BoundingBoxes {
+    // implementations for sort_on_index can be given a fn
+    // currently a size()
+    // alternatively, can the usual partial_cmp be used
+    // and a specific fn that gets dims[idx].size() be passed?
     fn sort_on_index(&mut self, idx: usize);
 
     fn make_all_covering(&self) -> BoundingBox;
@@ -107,12 +111,7 @@ trait BoundingBoxes {
 
 impl BoundingBoxes for &mut [BoundingBox] {
     fn sort_on_index(&mut self, idx: usize) {
-        self.sort_unstable_by(|b1, b2| {
-            b1.dims[idx]
-                .size()
-                .partial_cmp(&b2.dims[idx].size())
-                .unwrap()
-        });
+        self.sort_unstable_by(|b1, b2| b1.dims[idx].size_partial_cmp(&b2.dims[idx]).unwrap());
     }
 
     fn make_all_covering(&self) -> BoundingBox {
@@ -123,12 +122,7 @@ impl BoundingBoxes for &mut [BoundingBox] {
 
 impl BoundingBoxes for [BoundingBox] {
     fn sort_on_index(&mut self, idx: usize) {
-        self.sort_unstable_by(|b1, b2| {
-            b1.dims[idx]
-                .size()
-                .partial_cmp(&b2.dims[idx].size())
-                .unwrap()
-        });
+        self.sort_unstable_by(|b1, b2| b1.dims[idx].size_partial_cmp(&b2.dims[idx]).unwrap());
     }
 
     fn make_all_covering(&self) -> BoundingBox {
@@ -170,6 +164,11 @@ fn make_coveringtree(boxes: &mut [BoundingBox]) -> Box<CoveringTree> {
 
     Box::new(coveringtree)
 }
+
+/* a traversal method on the CoveringTree is needed
+which tests for intersection and then on its children if true
+until no more children to test, whereupon it tests on the BoundingBox boxed Hittable
+*/
 
 trait Cover {
     fn make_covering(&self) -> BoundingBox;
