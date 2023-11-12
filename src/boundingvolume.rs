@@ -50,6 +50,8 @@ impl BoundingBox {
     }
 
     fn check_intersection(&self, ray: &Ray) -> bool {
+        // the times are generated from the bbox.dims and ray.orig, ray.dir
+        // which is difficult to zip [(interval, orig, dir)]
         let mut times = [Interval::new(0.0, 0.0); 3];
         for i in 0..=2 {
             let start = (self.dims[i].start - ray.orig[i]) / ray.dir[i];
@@ -65,25 +67,19 @@ impl BoundingBox {
 
     // for use in the node split by longest axis
     fn longest_axis(&self) -> usize {
-        let x_size = self.dims[0].size();
-        let y_size = self.dims[1].size();
-        let z_size = self.dims[2].size();
+        let sizes: [f64; 3] = self.dims.map(|interval| interval.size());
 
-        if x_size > y_size && x_size > z_size {
+        if sizes[0] > sizes[1] && sizes[0] > sizes[2] {
             return 0;
         }
-        if y_size > z_size {
+        if sizes[1] > sizes[2] {
             return 1;
         }
         2
     }
 
     fn midpoint(&self) -> Vec3 {
-        Vec3([
-            self.dims[0].midpoint(),
-            self.dims[1].midpoint(),
-            self.dims[2].midpoint(),
-        ])
+        Vec3(self.dims.map(|interval| interval.midpoint()))
     }
 
     // this composition consumes the self and creates a new one
@@ -185,13 +181,10 @@ trait EachCover {
 
 impl Cover for geometry::Sphere {
     fn make_covering(&self) -> BoundingBox {
-        let midpoint = self.centre;
-        let mut cover = BoundingBox::empty();
-        for i in 0..2 {
-            cover.dims[i] =
-                Interval::new(self.centre[i] - self.radius, self.centre[i] + self.radius);
-        }
-        cover
+        let dims: [Interval; 3] = self
+            .centre
+            .map(|centre| Interval::new(centre - self.radius, centre + self.radius));
+        BoundingBox::with_dims(dims)
     }
 }
 
