@@ -4,6 +4,12 @@ pub struct Interval {
     pub end: f64,
 }
 
+impl PartialEq for Interval {
+    fn eq(&self, rhs: &Interval) -> bool {
+        self.start == rhs.start && self.end == rhs.end
+    }
+}
+
 impl Interval {
     pub fn size(&self) -> f64 {
         self.end - self.start

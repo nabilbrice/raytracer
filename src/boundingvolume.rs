@@ -12,6 +12,13 @@ struct BoundingBox {
     boxed: Option<&'static Hittable>,
 }
 
+impl PartialEq for BoundingBox {
+    fn eq(&self, rhs: &BoundingBox) -> bool {
+        // currently, only the size of the BoundingBox is compared
+        self.dims == rhs.dims
+    }
+}
+
 impl Deref for BoundingBox {
     type Target = Option<&'static Hittable>;
 
@@ -36,6 +43,10 @@ impl BoundingBox {
 
     fn with_dims(dims: [Interval; 3]) -> BoundingBox {
         BoundingBox { dims, boxed: None }
+    }
+
+    fn dims_copy(&self) -> BoundingBox {
+        BoundingBox::with_dims(self.dims.clone())
     }
 
     fn check_intersection(&self, ray: &Ray) -> bool {
@@ -275,11 +286,11 @@ mod tests {
             Interval::new(-1.0, 3.0),
         ]); // has midpoint Vec3([1.5,0.0,1.0])
 
-        let mut list = [bbox1, bbox2, bbox3];
+        let mut list = [bbox1.dims_copy(), bbox2.dims_copy(), bbox3.dims_copy()];
         list.sort_on_index(0);
-        assert_eq!(list[0].midpoint(), Vec3([0.5, 1.0, 1.5]));
+        assert!(list[0] == bbox1);
         list.sort_on_index(2);
-        assert_eq!(list[1].midpoint(), Vec3([0.5, 1.0, 1.5]));
+        assert!(list[1] == bbox1);
     }
 
     #[test]
@@ -288,7 +299,7 @@ mod tests {
         let bbox2 = BoundingBox::with_dims([Interval::new(-1.0, 1.0); 3]);
 
         let cover = bbox1.compose_with(&bbox2);
-        assert_eq!(cover.midpoint(), Vec3([0.0; 3]));
+        assert!(cover == bbox2);
     }
 
     #[test]
@@ -301,12 +312,12 @@ mod tests {
             Interval::new(-1.0, 1.0),
         ]);
 
-        let mut list = [bbox1, bbox2, bbox3];
+        let mut list = [bbox1.dims_copy(), bbox2, bbox3];
         let total_cover = list.make_all_covering();
         assert_eq!(total_cover.longest_axis(), 0);
 
         list.sort_on_index(total_cover.longest_axis());
-        assert_eq!(list[0].midpoint(), Vec3([0.5; 3]));
+        assert!(list[0] == bbox1);
     }
 
     #[test]
@@ -327,21 +338,17 @@ mod tests {
             Interval::new(3.0, 4.0),
         ]);
 
-        let bbox1_midpoint = bbox1.midpoint();
-        let bbox2_midpoint = bbox2.midpoint();
-        let bbox3_midpoint = bbox3.midpoint();
-
-        let mut list = [bbox1, bbox2, bbox3];
+        let mut list = [bbox1.dims_copy(), bbox2.dims_copy(), bbox3.dims_copy()];
         let total_cover = list.make_all_covering(); // (-2.0,1.0), (-3.0,2.0), (-2.0,4.0)
         list.sort_on_index(total_cover.longest_axis());
-        assert_eq!(list[0].midpoint(), bbox3_midpoint);
+        assert!(list[0] == bbox3);
 
         let (left_half, right_half) = split_on_covering(&mut list);
-        assert_eq!(right_half[0].midpoint(), bbox2_midpoint);
+        assert!(right_half[0] == bbox2);
         let right_cover = right_half.make_all_covering();
         assert_eq!(right_cover.longest_axis(), 1);
         right_half.sort_on_index(right_cover.longest_axis());
-        assert_eq!(right_half[0].midpoint(), bbox1_midpoint);
+        assert!(right_half[0] == bbox1);
     }
 
     #[test]
@@ -370,9 +377,6 @@ mod tests {
         let treebase = make_coveringtree(&mut list);
         assert!(treebase.right.is_some());
 
-        assert_eq!(
-            treebase.right.unwrap().cover.midpoint(),
-            b1b2cover.midpoint()
-        );
+        assert!(treebase.right.unwrap().cover == b1b2cover);
     }
 }
