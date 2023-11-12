@@ -36,8 +36,11 @@ impl PartialEq for Vec3 {
 impl ops::Add<Vec3> for Vec3 {
     type Output = Vec3;
 
-    fn add(self, _rhs: Vec3) -> Vec3 {
-        Vec3([self[0] + _rhs[0], self[1] + _rhs[1], self[2] + _rhs[2]])
+    fn add(mut self, _rhs: Vec3) -> Vec3 {
+        for i in 0..=2 {
+            self[i] += _rhs[i];
+        }
+        self
     }
 }
 
@@ -52,8 +55,11 @@ impl ops::Neg for Vec3 {
 impl ops::Sub<Vec3> for Vec3 {
     type Output = Vec3;
 
-    fn sub(self, _rhs: Vec3) -> Vec3 {
-        Vec3([self[0] - _rhs[0], self[1] - _rhs[1], self[2] - _rhs[2]])
+    fn sub(mut self, _rhs: Vec3) -> Vec3 {
+        for i in 0..=2 {
+            self[i] -= _rhs[i];
+        }
+        self
     }
 }
 
@@ -83,7 +89,9 @@ impl ops::Div<f64> for Vec3 {
 
 impl ops::AddAssign for Vec3 {
     fn add_assign(&mut self, rhs: Vec3) {
-        *self = Self([self[0] + rhs[0], self[1] + rhs[1], self[2] + rhs[2]])
+        for i in 0..=2 {
+            self[i] += rhs[i];
+        }
     }
 }
 
