@@ -1,14 +1,14 @@
+use serde::{Deserialize, Serialize};
 use std::cmp::PartialEq;
+use std::fmt::{self, Display, Formatter};
 use std::ops;
 use std::ops::{Deref, DerefMut};
-use std::fmt::{self, Formatter, Display};
-use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct Vec3(pub [f64;3]);
+pub struct Vec3(pub [f64; 3]);
 
 impl Deref for Vec3 {
-    type Target = [f64;3];
+    type Target = [f64; 3];
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -37,9 +37,7 @@ impl ops::Add<Vec3> for Vec3 {
     type Output = Vec3;
 
     fn add(self, _rhs: Vec3) -> Vec3 {
-        Vec3([self[0] + _rhs[0],
-             self[1] + _rhs[1],
-             self[2] + _rhs[2]])
+        Vec3([self[0] + _rhs[0], self[1] + _rhs[1], self[2] + _rhs[2]])
     }
 }
 
@@ -55,9 +53,7 @@ impl ops::Sub<Vec3> for Vec3 {
     type Output = Vec3;
 
     fn sub(self, _rhs: Vec3) -> Vec3 {
-        Vec3([self[0] - _rhs[0],
-             self[1] - _rhs[1],
-             self[2] - _rhs[2]])
+        Vec3([self[0] - _rhs[0], self[1] - _rhs[1], self[2] - _rhs[2]])
     }
 }
 
@@ -65,9 +61,7 @@ impl ops::Mul<f64> for Vec3 {
     type Output = Vec3;
 
     fn mul(self, _rhs: f64) -> Vec3 {
-        Vec3([self[0] * _rhs,
-             self[1] * _rhs,
-             self[2] * _rhs])
+        Vec3(self.map(|value| value * _rhs))
     }
 }
 
@@ -83,9 +77,7 @@ impl ops::Div<f64> for Vec3 {
     type Output = Vec3;
 
     fn div(self, _rhs: f64) -> Vec3 {
-        Vec3([self[0] / _rhs,
-             self[1] / _rhs,
-             self[2] / _rhs])
+        Vec3(self.map(|value| value / _rhs))
     }
 }
 
@@ -105,16 +97,17 @@ impl Vec3 {
     }
 
     pub fn cross(&self, other: &Vec3) -> Vec3 {
-        Vec3([self[1] * other[2] - self[2] * other[1],
+        Vec3([
+            self[1] * other[2] - self[2] * other[1],
             self[2] * other[0] - self[0] * other[2],
-            self[0] * other[1] - self[1] * other[0]])
+            self[0] * other[1] - self[1] * other[0],
+        ])
     }
 
     // Changes the input Vec3 to be a normalized Vec3
     pub fn normalize(self) -> Vec3 {
         self / self.norm()
     }
-
 }
 
 pub fn lerp_vec3(p: Vec3, q: Vec3, t: f64) -> Vec3 {
@@ -127,7 +120,7 @@ mod tests {
 
     #[test]
     fn norm_test() {
-        let u = Vec3([3.0,4.0,0.0]);
+        let u = Vec3([3.0, 4.0, 0.0]);
         assert_eq!(u.norm(), 5.0)
     }
 
