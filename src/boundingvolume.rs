@@ -7,6 +7,7 @@ use crate::ray::Ray;
 use crate::vector::Vec3;
 use crate::Hittable;
 
+// the BoundingBox struct is capable of storing any Type that implements intersect()
 struct BoundingBox {
     dims: [Interval; 3],
     boxed: Option<&'static Hittable>,
@@ -171,25 +172,37 @@ until no more children to test, whereupon it tests on the BoundingBox boxed Hitt
 */
 
 trait Cover {
-    fn make_covering(&self) -> BoundingBox;
+    // a BoundingBox cover can only exist for those things with a 'static lifetime
+    // since the .boxed member takes only a 'static reference
+    fn make_covering(&'static self) -> BoundingBox;
 }
 
 trait EachCover {
-    fn make_each_covering(&self) -> Box<[BoundingBox]>;
+    fn make_each_covering(&'static self) -> Box<[BoundingBox]>;
 }
 
-impl Cover for geometry::Sphere {
-    fn make_covering(&self) -> BoundingBox {
-        let dims: [Interval; 3] = self
-            .centre
-            .map(|centre| Interval::new(centre - self.radius, centre + self.radius));
-        BoundingBox::with_dims(dims)
+impl Cover for Hittable {
+    fn make_covering(&'static self) -> BoundingBox {
+        match &self.shape {
+            geometry::Shape::Sphere(sphere) => {
+                let dims: [Interval; 3] = sphere
+                    .centre
+                    .map(|centre| Interval::new(centre - sphere.radius, centre + sphere.radius));
+                BoundingBox {
+                    dims,
+                    boxed: Some(self),
+                }
+            }
+            _ => {
+                unimplemented!()
+            }
+        }
     }
 }
 
-impl EachCover for [geometry::Sphere] {
-    fn make_each_covering(&self) -> Box<[BoundingBox]> {
-        self.iter().map(|sphere| sphere.make_covering()).collect()
+impl EachCover for [Hittable] {
+    fn make_each_covering(&'static self) -> Box<[BoundingBox]> {
+        self.iter().map(|shape| shape.make_covering()).collect()
     }
 }
 
