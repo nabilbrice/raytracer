@@ -61,6 +61,13 @@ pub fn get_larger<'input>(in1: &'input Interval, in2: &'input Interval) -> &'inp
     &in1
 }
 
+#[macro_export]
+macro_rules! interval {
+    ( $start:expr, $end:expr ) => {
+        Interval::new($start, $end)
+    };
+}
+
 mod tests {
     use super::*;
 
@@ -99,5 +106,13 @@ mod tests {
 
         assert_eq!(get_larger(&in1, &in2).start, -1.0);
         assert_eq!(get_larger(&in1, &in2).end, 1.0);
+    }
+
+    #[test]
+    fn test_macro() {
+        let macro_generated = interval!(0.0, 1.0);
+        let funct_generated = Interval::new(0.0, 1.0);
+
+        assert_eq!(macro_generated, funct_generated);
     }
 }

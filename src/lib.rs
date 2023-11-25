@@ -4,6 +4,7 @@ pub mod camera;
 pub mod color;
 pub mod config;
 pub mod geometry;
+#[macro_use]
 pub mod intervals;
 pub mod materials;
 pub mod ray;
