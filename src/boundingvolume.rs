@@ -144,7 +144,7 @@ fn split_on_covering(boxes: &mut [BoundingBox]) -> (&mut [BoundingBox], &mut [Bo
     (left_half, right_half)
 }
 
-struct CoveringTree {
+pub struct CoveringTree {
     cover: BoundingBox,
     left: Option<Box<CoveringTree>>,
     right: Option<Box<CoveringTree>>,
@@ -173,17 +173,20 @@ fn make_coveringtree(boxes: &mut [BoundingBox]) -> Box<CoveringTree> {
 which tests for intersection and then on its children if true
 until no more children to test, whereupon it tests on the BoundingBox boxed Hittable
 */
-fn tree_filter(root: Box<CoveringTree>, ray: &Ray) -> Vec<(&Hittable, f64)> {
-    let mut hit_list: Vec<(&Hittable, f64)> = Vec::new();
+pub fn tree_filter(root: Box<CoveringTree>, subscene: &Vec<(&Hittable, Option<f64>)>, ray: &Ray) {
     if !root.cover.check_intersection(ray) {
-        hit_list
+        return;
     } else {
         if let Some(hittable) = root.cover.boxed {
-            if let Some(param) = hittable.shape.intersect(ray) {
-                hit_list.push((hittable, param))
-            }
+            let param = hittable.shape.intersect(ray);
+            subscene.push((hittable, param))
         }
-        hit_list
+        if let Some(left_root) = root.left {
+            tree_filter(left_root, subscene, ray);
+        }
+        if let Some(right_root) = root.right {
+            tree_filter(right_root, subscene, ray);
+        }
     }
 }
 

@@ -14,6 +14,7 @@ pub mod vector;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
+use boundingvolume::{tree_filter, CoveringTree};
 use color::Color;
 use geometry::Shape;
 use materials::Material;
@@ -30,7 +31,7 @@ pub struct Hittable {
 fn cmp_intersection(a: Option<f64>, b: Option<f64>) -> std::cmp::Ordering {
     match (a, b) {
         (Some(a), Some(b)) => a.partial_cmp(&b).unwrap(),
-        (Some(_), None) => std::cmp::Ordering::Less,
+        (Some(_), None) => std::cmp::Ordering::Less, // None is larger so < is returned
         (None, Some(_)) => std::cmp::Ordering::Greater,
         (None, None) => std::cmp::Ordering::Equal,
     }
@@ -39,12 +40,63 @@ fn cmp_intersection(a: Option<f64>, b: Option<f64>) -> std::cmp::Ordering {
 pub fn raytrace(ray: &Ray, scene: &[Hittable], scatter_depth: u8) -> Color {
     let mut color = Color::new(1.0, 1.0, 1.0);
 
-    let mut ray = ray.clone();
+    let mut ray = ray;
     let mut scatter_ray: Ray;
     for _ in 1..=scatter_depth {
         let (hit_obj, param) = scene
             .iter()
             .map(|hittable| (hittable, hittable.shape.intersect(ray)))
+            .min_by(|x, y| cmp_intersection(x.1, y.1))
+            .unwrap();
+
+        if param.is_some() {
+            let scatter_loc: Vec3 = ray.position_at(param.unwrap());
+            if let Material::Emitter { albedo } = hit_obj.material {
+                let cosine: f64 = ray.dir.dotprod(&hit_obj.shape.normal_at(scatter_loc));
+                return albedo * cosine.abs();
+            };
+            scatter_ray = hit_obj.material.scatter(ray, &hit_obj.shape, scatter_loc);
+            let obj_relative_loc: Vec3;
+            match &hit_obj.shape {
+                Shape::Sphere(sphere) => {
+                    obj_relative_loc = (scatter_loc - sphere.centre).normalize()
+                }
+                Shape::Disc(disc) => obj_relative_loc = scatter_loc - disc.centre,
+                _ => todo!(),
+            }
+            color = color * hit_obj.material.albedo(&obj_relative_loc);
+            ray = &scatter_ray;
+        } else {
+            let t = 0.5 * (ray.dir[1] + 1.0);
+            let sky_color = (1.0 - t)
+                * Color {
+                    r: 1.0,
+                    g: 1.0,
+                    b: 1.0,
+                }
+                + t * Color {
+                    r: 0.5,
+                    g: 0.7,
+                    b: 1.0,
+                };
+
+            return color * sky_color;
+        }
+    }
+
+    color
+}
+
+pub fn accel_raytrace(ray: &Ray, tree: Box<CoveringTree>, scatter_depth: u8) -> Color {
+    let mut color = Color::new(1.0, 1.0, 1.0);
+
+    let mut ray = ray;
+    let mut scatter_ray: Ray;
+    for _ in 1..=scatter_depth {
+        let subscene = Vec::<(&Hittable, f64)>::new();
+        tree_filter(tree, subscene, ray);
+        let (hit_obj, param) = subscene
+            .iter()
             .min_by(|x, y| cmp_intersection(x.1, y.1))
             .unwrap();
 
