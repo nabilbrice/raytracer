@@ -28,6 +28,9 @@ impl Interval {
     }
 }
 
+// intersection actually depends on the ordering of the start and end
+// the interval start must be the smaller number
+// or else the intersection will produce nonsense results
 pub fn intersection(in1: &Interval, in2: &Interval) -> Option<Interval> {
     let start = if in1.start < in2.start {
         in2.start

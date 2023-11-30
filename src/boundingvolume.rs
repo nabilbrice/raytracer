@@ -11,9 +11,21 @@ use crate::vector::Vec3;
 use crate::Hittable;
 
 // the BoundingBox struct is capable of storing any Type that implements intersect()
-struct BoundingBox {
+// the question is: should BoundingBox be the object allocated to the heap or is it a helper?
+// these are meant to be operated on sequentially
+// but they are also meant to be in the CoveringTree structure
+pub struct BoundingBox {
     dims: [Interval; 3],
-    boxed: Option<&'static Hittable>,
+    boxed: Option<Hittable>,
+}
+
+impl Default for BoundingBox {
+    fn default() -> Self {
+        BoundingBox {
+            dims: [interval!(0.0, 0.0); 3],
+            boxed: None,
+        }
+    }
 }
 
 impl PartialEq for BoundingBox {
@@ -24,7 +36,7 @@ impl PartialEq for BoundingBox {
 }
 
 impl Deref for BoundingBox {
-    type Target = Option<&'static Hittable>;
+    type Target = Option<Hittable>;
 
     fn deref(&self) -> &Self::Target {
         &self.boxed
@@ -53,14 +65,27 @@ impl BoundingBox {
         BoundingBox::with_dims(self.dims.clone())
     }
 
-    fn check_intersection(&self, ray: &Ray) -> bool {
+    // the function should return true if there exists some time parameter
+    // for which (ray.orig + t * ray.dir) is in the BoundingBox
+    pub fn check_intersection(&self, ray: &Ray) -> bool {
         // the times are generated from the bbox.dims and ray.orig, ray.dir
         // which is difficult to zip [(interval, orig, dir)]
         let mut times = [interval!(0.0, 0.0); 3];
         for i in 0..=2 {
-            let start = (self.dims[i].start - ray.orig[i]) / ray.dir[i];
-            let end = (self.dims[i].end - ray.orig[i]) / ray.dir[i];
+            let divisor: f64;
+            if ray.dir[i] == 0.0 {
+                divisor = 1.0e-4;
+            } else {
+                divisor = ray.dir[i];
+            }
+            let start = (self.dims[i].start - ray.orig[i]) / divisor;
+            let end = (self.dims[i].end - ray.orig[i]) / divisor;
+            // need to reverse the times ordering in case of
+            // negative ray.dir[i]:
             times[i] = interval!(start, end);
+            if times[i].size() < 0.0 {
+                times[i] = interval!(end, start);
+            }
         }
 
         let Some(xy) = intersection(&times[0], &times[1]) else {
@@ -144,64 +169,78 @@ fn split_on_covering(boxes: &mut [BoundingBox]) -> (&mut [BoundingBox], &mut [Bo
     (left_half, right_half)
 }
 
+// this struct should actually only contain the pointer to the BoundingBox
+// as once it is constructed, it does not need to mutate it
 pub struct CoveringTree {
-    cover: BoundingBox,
-    left: Option<Box<CoveringTree>>,
-    right: Option<Box<CoveringTree>>,
+    pub cover: BoundingBox,
+    pub left: Option<Box<CoveringTree>>,
+    pub right: Option<Box<CoveringTree>>,
 }
 
-fn make_coveringtree(boxes: &mut [BoundingBox]) -> Box<CoveringTree> {
-    let covering = boxes.make_all_covering();
-    let mut coveringtree = CoveringTree {
-        cover: covering,
-        left: None,
-        right: None,
-    };
-
-    let (left_half, right_half) = split_on_covering(boxes);
-    if left_half.len() > 1 {
-        coveringtree.left = Some(make_coveringtree(left_half));
-    };
-    if right_half.len() > 1 {
-        coveringtree.right = Some(make_coveringtree(right_half));
+impl CoveringTree {
+    fn make_from(boxes: &[BoundingBox]) -> CoveringTree {
+        CoveringTree {
+            cover: boxes.make_all_covering(),
+            left: None,
+            right: None,
+        }
     }
+}
 
-    Box::new(coveringtree)
+// there is a problem in the allocation...
+// Box is still dropped at the end of the function...
+pub fn make_coveringtree(boxes: &mut [BoundingBox]) -> Box<CoveringTree> {
+    if boxes.len() > 1 {
+        let mut tree = CoveringTree::make_from(boxes);
+        let (left_half, right_half) = split_on_covering(boxes);
+        tree.left = Some(make_coveringtree(left_half));
+        tree.right = Some(make_coveringtree(right_half));
+
+        Box::new(tree)
+    } else {
+        Box::new(CoveringTree {
+            // need to use the take to grab the first bbox
+            cover: std::mem::take(boxes.first_mut().unwrap()),
+            left: None,
+            right: None,
+        })
+    }
 }
 
 /* a traversal method on the CoveringTree is needed
 which tests for intersection and then on its children if true
 until no more children to test, whereupon it tests on the BoundingBox boxed Hittable
 */
-pub fn tree_filter(root: Box<CoveringTree>, subscene: &Vec<(&Hittable, Option<f64>)>, ray: &Ray) {
-    if !root.cover.check_intersection(ray) {
-        return;
-    } else {
-        if let Some(hittable) = root.cover.boxed {
-            let param = hittable.shape.intersect(ray);
-            subscene.push((hittable, param))
+pub fn tree_filter<'a>(
+    root: &'a Box<CoveringTree>,
+    subscene: &mut Vec<(&'a Hittable, Option<f64>)>,
+    ray: &Ray,
+) {
+    if root.cover.check_intersection(ray) {
+        if let Some(hittable) = &root.cover.boxed {
+            let possible_param = hittable.shape.intersect(ray);
+            subscene.push((&hittable, possible_param));
         }
-        if let Some(left_root) = root.left {
+        if let Some(left_root) = &root.left {
             tree_filter(left_root, subscene, ray);
         }
-        if let Some(right_root) = root.right {
+        if let Some(right_root) = &root.right {
             tree_filter(right_root, subscene, ray);
         }
     }
 }
 
-trait Cover {
-    // a BoundingBox cover can only exist for those things with a 'static lifetime
-    // since the .boxed member takes only a 'static reference
-    fn make_covering(&'static self) -> BoundingBox;
+pub trait Cover {
+    // need to move the Hittable into the BoundingBox
+    fn make_covering(self) -> BoundingBox;
 }
 
 trait EachCover {
-    fn make_each_covering(&'static self) -> Box<[BoundingBox]>;
+    fn make_each_covering(self) -> Vec<BoundingBox>;
 }
 
 impl Cover for Hittable {
-    fn make_covering(&'static self) -> BoundingBox {
+    fn make_covering(self) -> BoundingBox {
         match &self.shape {
             geometry::Shape::Sphere(sphere) => {
                 let dims: [Interval; 3] = sphere
@@ -219,16 +258,16 @@ impl Cover for Hittable {
     }
 }
 
-impl EachCover for [Hittable] {
-    fn make_each_covering(&'static self) -> Box<[BoundingBox]> {
-        self.iter().map(|shape| shape.make_covering()).collect()
-    }
-}
-
 mod tests {
     use super::*;
+    use crate::cmp_intersection;
+    use crate::color::Color;
+    use crate::geometry::Sphere;
+    use crate::materials::Material;
+    use crate::scenegen;
     use crate::vector::Vec3;
     use crate::Hittable;
+    use crate::Shape;
 
     #[test]
     fn test_bbox_intersection() {
@@ -238,6 +277,11 @@ mod tests {
             dir: Vec3([1.0, 0.0, 0.0]),
         };
         assert!(bbox.check_intersection(&ray));
+        let reverseray = Ray {
+            orig: Vec3([1.5, 0.5, 0.5]),
+            dir: Vec3([-1.0, 0.0, 0.0]),
+        };
+        assert!(bbox.check_intersection(&reverseray));
 
         let miss_ray = Ray {
             orig: Vec3([1.5, 1.5, 0.5]),
@@ -402,5 +446,69 @@ mod tests {
         assert!(treebase.right.is_some());
 
         assert!(treebase.right.unwrap().cover == b1b2cover);
+    }
+
+    #[test]
+    fn test_coveringtree_intersect() {
+        let mut covers = Vec::<BoundingBox>::new();
+        let sphere1 = Sphere::new(Vec3([0.0, 0.0, 0.0]), 5.0);
+        let material1 = Material::Diffuse {
+            albedo: Color::new(1.0, 1.0, 1.0),
+        };
+        let sphere2 = Sphere::new(Vec3([0.0, 0.0, 2.0]), 1.0);
+        let material2 = Material::Diffuse {
+            albedo: Color::new(1.0, 1.0, 1.0),
+        };
+        let sphere3 = Sphere::new(Vec3([0.0, 2.0, 0.0]), 1.0);
+        let material3 = Material::Diffuse {
+            albedo: Color::new(1.0, 1.0, 1.0),
+        };
+        let hittable1 = Hittable {
+            shape: Shape::Sphere(sphere1),
+            material: material1,
+        };
+        covers.push(hittable1.make_covering());
+        let hittable2 = Hittable {
+            shape: Shape::Sphere(sphere2),
+            material: material2,
+        };
+        covers.push(hittable2.make_covering());
+        let hittable3 = Hittable {
+            shape: Shape::Sphere(sphere3),
+            material: material3,
+        };
+        covers.push(hittable3.make_covering());
+
+        let tree = {
+            let mut boxes = covers.into_boxed_slice();
+            make_coveringtree(&mut boxes)
+        };
+
+        let mut subscene = Vec::<(&Hittable, Option<f64>)>::new();
+        let ray = Ray {
+            orig: Vec3([-1.5, -0.5, -0.5]),
+            dir: Vec3([1.0, 0.0, 0.0]),
+        };
+        tree_filter(&tree, &mut subscene, &ray);
+
+        if let Some((hittable, Some(param))) =
+            subscene.iter().min_by(|x, y| cmp_intersection(x.1, y.1))
+        {
+            assert!(param.is_finite(), "gone into");
+        }
+
+        assert!(tree.cover.check_intersection(&ray), "intersection failed!");
+        assert!(!subscene.is_empty(), "subscene should contain hittable1");
+    }
+
+    #[test]
+    fn test_debug_scene() {
+        let tree = scenegen::debug_scene();
+        let mut subscene = Vec::<(&Hittable, Option<f64>)>::new();
+        let outray = Ray {
+            orig: Vec3([10.0, 0.0, 0.0]),
+            dir: Vec3([1.0, 0.0, 0.0]),
+        };
+        tree_filter(&tree, &mut subscene, &outray);
     }
 }

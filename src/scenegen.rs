@@ -1,3 +1,4 @@
+use crate::boundingvolume::{make_coveringtree, BoundingBox, Cover, CoveringTree};
 use crate::camera::Camera;
 use crate::geometry::{Shape, Sphere};
 use crate::materials::Material;
@@ -8,9 +9,9 @@ use crate::Hittable;
 use rand::rngs::ThreadRng;
 use rand::Rng;
 
-pub fn gen_scene() -> Box<[Hittable]> {
+pub fn gen_scene() -> Box<CoveringTree> {
     let mut rng = rand::thread_rng();
-    let mut scene: Vec<Hittable> = Vec::new();
+    let mut scene: Vec<BoundingBox> = Vec::new();
 
     let ground_sphere = Sphere::new(Vec3([0.0, -1000.0, 0.0]), 1000.0);
     let ground = Hittable {
@@ -19,7 +20,7 @@ pub fn gen_scene() -> Box<[Hittable]> {
             albedo: Color::new(0.5, 0.5, 0.5),
         },
     };
-    scene.push(ground);
+    scene.push(ground.make_covering());
 
     let big_sphere1 = Sphere::new(Vec3([0.0, 1.0, 0.0]), 1.0);
     let glass_sphere = Hittable {
@@ -28,7 +29,7 @@ pub fn gen_scene() -> Box<[Hittable]> {
             refractive_index: 1.5,
         },
     };
-    scene.push(glass_sphere);
+    scene.push(glass_sphere.make_covering());
     let big_sphere2 = Sphere::new(Vec3([-4.0, 1.0, 0.0]), 1.0);
     let matte_sphere = Hittable {
         shape: Shape::Sphere(big_sphere2),
@@ -36,7 +37,7 @@ pub fn gen_scene() -> Box<[Hittable]> {
             albedo: Color::new(0.4, 0.2, 0.1),
         },
     };
-    scene.push(matte_sphere);
+    scene.push(matte_sphere.make_covering());
     let big_sphere3 = Sphere::new(Vec3([4.0, 1.0, 0.0]), 1.0);
     let metal_sphere = Hittable {
         shape: Shape::Sphere(big_sphere3),
@@ -45,7 +46,7 @@ pub fn gen_scene() -> Box<[Hittable]> {
             fuzz: 0.0,
         },
     };
-    scene.push(metal_sphere);
+    scene.push(metal_sphere.make_covering());
 
     for x in -11..11 {
         for z in -11..11 {
@@ -55,17 +56,21 @@ pub fn gen_scene() -> Box<[Hittable]> {
                 z as f64 + 0.9 * rng.gen::<f64>(),
             ]);
             let hittable = gen_hittable(&mut rng, location);
-            scene.push(hittable);
+            scene.push(hittable.make_covering());
         }
     }
 
-    scene.into()
+    let mut bboxed = scene.into_boxed_slice();
+
+    println!("number of BoundingBox: {}", bboxed.len());
+
+    make_coveringtree(&mut bboxed)
 }
 
 pub fn default_camera() -> Camera {
     Camera::build(
         Vec3([0.0, 0.0, 0.0]),
-        Vec3([13.0, 2.0, 3.0]),
+        Vec3([13.0, 1.5, 3.0]),
         1.0,
         0.1,
         512,
@@ -101,4 +106,33 @@ fn gen_hittable(rng: &mut ThreadRng, location: Vec3) -> Hittable {
         shape: Shape::Sphere(small_sphere),
         material,
     }
+}
+
+pub fn debug_scene() -> Box<CoveringTree> {
+    let mut scene: Vec<BoundingBox> = Vec::new();
+    let big_sphere2 = Sphere::new(Vec3([0.0, 0.0, 0.0]), 5.0);
+    let matte_sphere = Hittable {
+        shape: Shape::Sphere(big_sphere2),
+        material: Material::Diffuse {
+            albedo: Color::new(0.4, 0.2, 0.1),
+        },
+    };
+    scene.push(matte_sphere.make_covering());
+
+    let mut bboxed = scene.into_boxed_slice();
+
+    println!("number of BoundingBox: {}", bboxed.len());
+
+    make_coveringtree(&mut bboxed)
+}
+
+pub fn debug_camera() -> Camera {
+    Camera::build(
+        Vec3([0.0, 0.0, 0.0]),
+        Vec3([10.0, 0.0, 0.0]),
+        1.0,
+        0.1,
+        512,
+        512,
+    )
 }

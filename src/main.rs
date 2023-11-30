@@ -7,15 +7,20 @@ use std::time::Instant;
 use raytracer::config::Config;
 use raytracer::scenegen;
 
+enum SceneType {
+    Scene(Box<[raytracer::Hittable]>),
+    Tree(Box<raytracer::boundingvolume::CoveringTree>),
+}
+
 fn main() {
     let cli_args = Cli::parse();
     let spp: u32 = cli_args.samples_per_pixel; // samples per pixel, default set at 10
 
-    let scene: Box<[raytracer::Hittable]>;
+    let scene: SceneType;
     let cam: raytracer::camera::Camera;
 
     if cli_args.random_scene {
-        scene = scenegen::gen_scene();
+        scene = SceneType::Tree(scenegen::gen_scene());
         cam = scenegen::default_camera();
     } else {
         let config_contents = fs::read("./scene.json").expect("unable to read scene file");
@@ -23,7 +28,7 @@ fn main() {
         let de_config = serde_json::from_slice::<Config>(&config_contents)
             .expect("unable to deserialize scene information");
 
-        scene = de_config.hittables.into();
+        scene = SceneType::Scene(de_config.hittables.into());
         cam = de_config.camera.setup();
     }
 
@@ -43,7 +48,14 @@ fn main() {
         &cam.horiz_res * &cam.vert_res * spp
     );
     let timer = Instant::now();
-    raytracer::render_into_file(&mut file, &cam, &*scene, spp);
+    match scene {
+        SceneType::Scene(scene) => {
+            raytracer::render_into_file(&mut file, &cam, &*scene, spp);
+        }
+        SceneType::Tree(tree) => {
+            raytracer::accel_render_into_file(&mut file, &cam, tree, spp);
+        }
+    }
     println!("Render finished in {}s", timer.elapsed().as_secs());
 }
 
