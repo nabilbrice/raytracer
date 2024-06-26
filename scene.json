@@ -17,8 +17,8 @@
 
         {"shape" : {"Sphere" : {"centre": [0.0,0.2,3.0], "radius": 0.75}},
         "material": {"TextureMap": {"map": "earthmap.jpeg",
-                     "orient_up" : [0.0, 1.0, -0.6],
-                     "orient_around" : [1.0, 0.0, 0.5]}}}
+                     "orient_up" : [0.0, 1.0, 0.0],
+                     "orient_around" : [1.0, 0.0, 0.0]}}}
     ]
 
 }

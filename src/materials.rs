@@ -62,8 +62,14 @@ impl Material {
                 orient_up,
                 orient_around,
             } => {
-                let latitude: f64 = location[1].acos();
-                let longitude: f64 = location[2].atan2(location[0]) + PI;
+                // Local coordinate axis are constructed for the sphere
+                let local_north = orient_up.normalize();
+                let local_around = local_north.cross(&orient_around.normalize()).normalize();
+                let local_meridian = local_around.cross(&local_north).normalize();
+                let latitude: f64 = (location.dotprod(&local_north)).acos();
+                let longitude: f64 = (location.dotprod(&local_around))
+                    .atan2(-location.dotprod(&local_meridian))
+                    + PI;
                 let texture_color: Rgba<u8> = get_texture_rgba(&img, longitude, latitude);
                 rgba_to_color(texture_color)
             }
@@ -153,7 +159,7 @@ fn get_texture_rgba(image: &DynamicImage, longitude_rad: f64, latitude_rad: f64)
     let dimensions: (u32, u32) = image.dimensions();
 
     let (pixel_column, pixel_row): (f64, f64) = (
-        0.5 * longitude_rad / PI * (dimensions.0 as f64 - 1.0),
+        (0.5 * longitude_rad / PI) * (dimensions.0 as f64 - 1.0),
         latitude_rad / PI * (dimensions.1 as f64 - 1.0),
     );
 
