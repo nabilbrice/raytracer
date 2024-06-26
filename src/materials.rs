@@ -46,6 +46,7 @@ serde_with::serde_conv!(
 );
 
 impl Material {
+    // location is a normalized vector
     pub fn albedo(&self, location: &Vec3) -> Color {
         match self {
             Material::Diffuse { albedo: color } => *color,
@@ -61,16 +62,8 @@ impl Material {
                 orient_up,
                 orient_around,
             } => {
-                let latitude: f64 = orient_up.normalize().dotprod(&location).acos();
-                let orient_axes: (Vec3, Vec3) = (
-                    orient_around.normalize(),
-                    orient_up.normalize().cross(&orient_around.normalize()),
-                );
-                let longitude: f64 = orient_axes
-                    .0
-                    .dotprod(&location)
-                    .atan2(orient_axes.1.dotprod(&location))
-                    + PI;
+                let latitude: f64 = location[1].acos();
+                let longitude: f64 = location[2].atan2(location[0]) + PI;
                 let texture_color: Rgba<u8> = get_texture_rgba(&img, longitude, latitude);
                 rgba_to_color(texture_color)
             }
