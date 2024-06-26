@@ -153,8 +153,8 @@ fn get_texture_rgba(image: &DynamicImage, longitude_rad: f64, latitude_rad: f64)
     let dimensions: (u32, u32) = image.dimensions();
 
     let (pixel_column, pixel_row): (f64, f64) = (
-        0.5 * longitude_rad / PI * (dimensions.0 as f64),
-        latitude_rad / PI * (dimensions.1 as f64),
+        0.5 * longitude_rad / PI * (dimensions.0 as f64 - 1.0),
+        latitude_rad / PI * (dimensions.1 as f64 - 1.0),
     );
 
     image.get_pixel(
