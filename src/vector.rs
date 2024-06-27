@@ -1,124 +1,98 @@
+use ndarray::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::cmp::PartialEq;
 use std::fmt::{self, Display, Formatter};
-use std::ops;
+use std::ops::{self, AddAssign};
 use std::ops::{Deref, DerefMut};
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct Vec3(pub [f64; 3]);
+#[derive(Debug, Clone)]
+pub struct Vector {
+    pub values: Array<f64, Ix1>,
+}
 
-impl Deref for Vec3 {
-    type Target = [f64; 3];
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
+impl std::cmp::PartialEq for Vector {
+    fn eq(&self, other: &Vector) -> bool {
+        self.values == other.values
     }
 }
 
-impl DerefMut for Vec3 {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl Display for Vec3 {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "({}, {}, {})", self[0], self[1], self[2])
-    }
-}
-
-impl PartialEq for Vec3 {
-    fn eq(&self, other: &Vec3) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl ops::Add<Vec3> for Vec3 {
-    type Output = Vec3;
-
-    fn add(mut self, _rhs: Vec3) -> Vec3 {
-        for i in 0..=2 {
-            self[i] += _rhs[i];
-        }
-        self
-    }
-}
-
-impl ops::Neg for Vec3 {
-    type Output = Vec3;
-
-    fn neg(self) -> Vec3 {
-        Vec3([-self[0], -self[1], -self[2]])
-    }
-}
-
-impl ops::Sub<Vec3> for Vec3 {
-    type Output = Vec3;
-
-    fn sub(mut self, _rhs: Vec3) -> Vec3 {
-        for i in 0..=2 {
-            self[i] -= _rhs[i];
-        }
-        self
-    }
-}
-
-impl ops::Mul<f64> for Vec3 {
-    type Output = Vec3;
-
-    fn mul(self, _rhs: f64) -> Vec3 {
-        Vec3(self.map(|value| value * _rhs))
-    }
-}
-
-impl ops::Mul<Vec3> for f64 {
-    type Output = Vec3;
-
-    fn mul(self, _rhs: Vec3) -> Vec3 {
-        _rhs.mul(self)
-    }
-}
-
-impl ops::Div<f64> for Vec3 {
-    type Output = Vec3;
-
-    fn div(self, _rhs: f64) -> Vec3 {
-        Vec3(self.map(|value| value / _rhs))
-    }
-}
-
-impl ops::AddAssign for Vec3 {
-    fn add_assign(&mut self, rhs: Vec3) {
-        for i in 0..=2 {
-            self[i] += rhs[i];
-        }
-    }
-}
-
-impl Vec3 {
-    pub fn norm(&self) -> f64 {
-        (self[0] * self[0] + self[1] * self[1] + self[2] * self[2]).sqrt()
+impl Vector {
+    fn new(values: Array<f64, Ix1>) -> Self {
+        Self { values }
     }
 
-    pub fn dotprod(&self, other: &Vec3) -> f64 {
-        self[0] * other[0] + self[1] * other[1] + self[2] * other[2]
+    #[inline]
+    fn dotprod(&self, other: &Vector) -> f64 {
+        self.values.dot(&other.values)
     }
 
-    pub fn cross(&self, other: &Vec3) -> Vec3 {
-        Vec3([
-            self[1] * other[2] - self[2] * other[1],
-            self[2] * other[0] - self[0] * other[2],
-            self[0] * other[1] - self[1] * other[0],
+    #[inline]
+    fn norm(&self) -> f64 {
+        self.dotprod(self).sqrt()
+    }
+
+    fn normalize(self) -> Self {
+        Self::new(self.values / self.norm())
+    }
+
+    fn cross3d(&self, other: &Self) -> Self {
+        Self::new(array![
+            self.values[1] * other.values[2] - self.values[2] * other.values[1],
+            self.values[2] * other.values[0] - self.values[0] * other.values[2],
+            self.values[0] * other.values[1] - self.values[1] * other.values[0],
         ])
     }
+}
 
-    // Changes the input Vec3 to be a normalized Vec3
-    pub fn normalize(self) -> Vec3 {
-        self / self.norm()
+impl ops::Add<Vector> for Vector {
+    type Output = Vector;
+
+    fn add(mut self, rhs: Vector) -> Vector {
+        Vector::new(self.values + rhs.values)
     }
 }
 
-pub fn lerp_vec3(p: Vec3, q: Vec3, t: f64) -> Vec3 {
+impl ops::Neg for Vector {
+    type Output = Vector;
+
+    fn neg(self) -> Vector {
+        Vector::new(-self.values)
+    }
+}
+
+impl ops::Sub<Vector> for Vector {
+    type Output = Vector;
+
+    fn sub(mut self, rhs: Vector) -> Vector {
+        Vector::new(self.values - rhs.values)
+    }
+}
+
+impl ops::Mul<f64> for Vector {
+    type Output = Vector;
+
+    fn mul(self, rhs: f64) -> Vector {
+        Vector::new(self.values * rhs)
+    }
+}
+
+impl ops::Mul<Vector> for f64 {
+    type Output = Vector;
+
+    fn mul(self, rhs: Vector) -> Vector {
+        rhs.mul(self)
+    }
+}
+
+impl ops::Div<f64> for Vector {
+    type Output = Vector;
+
+    fn div(self, rhs: f64) -> Vector {
+        Vector::new(self.values / rhs)
+    }
+}
+
+pub fn lerp(p: Vector, q: Vector, t: f64) -> Vector {
     ((1.0 - t) * p) + (t * q)
 }
 
@@ -128,21 +102,21 @@ mod tests {
 
     #[test]
     fn norm_test() {
-        let u = Vec3([3.0, 4.0, 0.0]);
+        let u = Vector::new(array![3.0, 4.0, 0.0]);
         assert_eq!(u.norm(), 5.0)
     }
 
     #[test]
     fn dotprod_test() {
-        let u = Vec3([1.0, 0.0, 0.0]);
-        let v = Vec3([0.5, 0.0, 0.0]);
+        let u = Vector::new(array![1.0, 0.0, 0.0]);
+        let v = Vector::new(array![0.5, 0.0, 0.0]);
         assert_eq!(u.dotprod(&v), 0.5)
     }
 
     #[test]
     fn cross_test() {
-        let u = Vec3([1.0, 0.0, 0.0]);
-        let v = Vec3([0.0, 1.0, 0.0]);
-        assert_eq!(u.cross(&v), Vec3([0.0, 0.0, 1.0]))
+        let u = Vector::new(array![1.0, 0.0, 0.0]);
+        let v = Vector::new(array![0.0, 1.0, 0.0]);
+        assert_eq!(u.cross3d(&v), Vector::new(array![0.0, 0.0, 1.0]))
     }
 }
